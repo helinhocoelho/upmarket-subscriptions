@@ -16,6 +16,131 @@ class AdminMenu
     {
         add_action('admin_menu', [$this, 'add_admin_menus']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+        add_action('admin_init', [$this, 'handle_plan_actions']);
+    }
+
+    /**
+     * Manipula ações de planos (exclusão, salvamento, etc)
+     */
+    public function handle_plan_actions(): void
+    {
+        // Só processar se estamos na página de planos
+        if (!isset($_GET['page']) || $_GET['page'] !== 'upmkt-subscription-plans') {
+            return;
+        }
+
+        // Processar exclusão
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['plan_id'])) {
+            $this->handle_plan_deletion();
+        }
+
+        // CORREÇÃO: Processar salvamento do formulário
+        if (isset($_POST['submit_plan']) && isset($_POST['upmkt_plan_nonce'])) {
+            $this->handle_plan_save();
+        }
+    }
+
+    /**
+     * Manipula salvamento do plano (agora chamado via admin_init)
+     */
+    private function handle_plan_save(): void
+    {
+        if (!wp_verify_nonce($_POST['upmkt_plan_nonce'], 'upmkt_save_plan')) {
+            wp_die('Erro de segurança. Nonce inválido.');
+        }
+
+        if (!current_user_can('manage_upmkt_subscriptions')) {
+            wp_die('Sem permissão para salvar planos.');
+        }
+
+        $plan_id = $_GET['plan_id'] ?? 0;
+        $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($plan_id);
+
+        try {
+            $name = sanitize_text_field($_POST['name'] ?? '');
+            $description = sanitize_textarea_field($_POST['description'] ?? '');
+            $price = floatval($_POST['price'] ?? 0);
+            $billing_period = sanitize_text_field($_POST['billing_period'] ?? 'month');
+            $billing_frequency = intval($_POST['billing_frequency'] ?? 1);
+            $trial_period_days = intval($_POST['trial_period_days'] ?? 0);
+            $is_active = isset($_POST['is_active']);
+
+            // Processar features
+            $features_text = sanitize_textarea_field($_POST['features'] ?? '');
+            $features = array_filter(array_map('trim', explode("\n", $features_text)));
+
+            // Validações
+            if (empty($name)) {
+                throw new \Exception('O nome do plano é obrigatório.');
+            }
+
+            if ($price <= 0) {
+                throw new \Exception('O preço deve ser maior que zero.');
+            }
+
+            if ($billing_frequency < 1) {
+                throw new \Exception('A frequência deve ser pelo menos 1.');
+            }
+
+            if ($trial_period_days < 0) {
+                throw new \Exception('Os dias de trial não podem ser negativos.');
+            }
+
+            $is_new = !$plan->exists();
+
+            // Se é um novo plano, criar
+            if ($is_new) {
+                $new_plan = \UPMarket\Subscriptions\Entities\SubscriptionPlan::create(
+                    $name,
+                    $price,
+                    $billing_period,
+                    [
+                        'description' => $description,
+                        'billing_frequency' => $billing_frequency,
+                        'trial_period_days' => $trial_period_days,
+                        'is_active' => $is_active,
+                        'features' => $features
+                    ]
+                );
+
+                if ($new_plan) {
+                    $message = 'created';
+                } else {
+                    throw new \Exception('Erro ao criar plano.');
+                }
+            } else {
+                // Atualizar plano existente
+                $plan_data = [
+                    'name' => $name,
+                    'description' => $description,
+                    'price' => $price,
+                    'billing_period' => $billing_period,
+                    'billing_frequency' => $billing_frequency,
+                    'trial_period_days' => $trial_period_days,
+                    'is_active' => $is_active,
+                    'features' => $features
+                ];
+
+                $result = $this->update_plan_entity($plan, $plan_data);
+
+                if ($result) {
+                    $message = 'updated';
+                } else {
+                    throw new \Exception('Erro ao atualizar plano.');
+                }
+            }
+
+            // Redirecionar para a lista de planos com mensagem de sucesso
+            $redirect_url = admin_url('admin.php?page=upmkt-subscription-plans');
+            $redirect_url = add_query_arg('message', $message, $redirect_url);
+
+            wp_safe_redirect($redirect_url);
+            exit;
+
+        } catch (\Exception $e) {
+            // Em caso de erro, mostrar mensagem de erro
+            wp_die('Erro ao salvar plano: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -175,7 +300,8 @@ class AdminMenu
             wp_die('Você não tem permissão para acessar esta página.');
         }
 
-        // VERSAO SIMPLIFICADA - sem table list por enquanto
+        $subscriptions_table = new SubscriptionsListTable();
+        $subscriptions_table->prepare_items();
         ?>
     <div class="wrap upmkt-admin">
         <h1 class="wp-heading-inline">Todas as Assinaturas</h1>
@@ -186,11 +312,13 @@ class AdminMenu
             </a>
         </div>
         
-        <div class="upmkt-card">
-            <p>Lista de assinaturas será implementada em breve.</p>
-            <p>Por enquanto, você pode ver as assinaturas diretamente no banco de dados na tabela <code><?php global $wpdb;
-        echo $wpdb->prefix; ?>upmkt_subscriptions</code></p>
-        </div>
+        <form method="get">
+            <input type="hidden" name="page" value="upmkt-subscriptions-list">
+            <?php
+                $subscriptions_table->search_box('Buscar assinaturas', 'search');
+        $subscriptions_table->display();
+        ?>
+        </form>
     </div>
     <?php
     }
@@ -217,25 +345,90 @@ class AdminMenu
     }
 
     /**
+     * Manipula exclusão de plano (agora chamado via admin_init)
+     */
+    private function handle_plan_deletion(): void
+    {
+        $plan_id = $_GET['plan_id'] ?? 0;
+        $nonce = $_GET['_wpnonce'] ?? '';
+
+        if (!$plan_id || !wp_verify_nonce($nonce, 'delete_plan_' . $plan_id)) {
+            wp_die('Erro de segurança.');
+        }
+
+        if (!current_user_can('manage_upmkt_subscriptions')) {
+            wp_die('Sem permissão para excluir planos.');
+        }
+
+        global $wpdb;
+
+        // Verificar se há assinaturas usando este plano
+        $subscriptions_count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}upmkt_subscriptions WHERE plan_id = %d",
+                $plan_id
+            )
+        );
+
+        if ($subscriptions_count > 0) {
+            add_action('admin_notices', function () {
+                echo '<div class="notice notice-error"><p>Não é possível excluir este plano pois existem assinaturas ativas vinculadas a ele.</p></div>';
+            });
+            return;
+        }
+
+        // Excluir plano
+        $deleted = $wpdb->delete(
+            $wpdb->prefix . 'upmkt_subscription_plans',
+            ['id' => $plan_id],
+            ['%d']
+        );
+
+        if ($deleted) {
+            wp_safe_redirect(admin_url('admin.php?page=upmkt-subscription-plans&message=deleted'));
+            exit;
+        } else {
+            add_action('admin_notices', function () {
+                echo '<div class="notice notice-error"><p>Erro ao excluir plano.</p></div>';
+            });
+        }
+    }
+
+    /**
      * Renderiza a lista de planos
      */
     private function render_plans_list_page(): void
     {
-        // VERSAO SIMPLIFICADA - sem table list por enquanto
+        // Mostrar mensagens de feedback
+        if (isset($_GET['message'])) {
+            switch ($_GET['message']) {
+                case 'created':
+                    echo '<div class="notice notice-success"><p>Plano criado com sucesso!</p></div>';
+                    break;
+                case 'updated':
+                    echo '<div class="notice notice-success"><p>Plano atualizado com sucesso!</p></div>';
+                    break;
+                case 'deleted':
+                    echo '<div class="notice notice-success"><p>Plano excluído com sucesso!</p></div>';
+                    break;
+            }
+        }
+
+        $plans_table = new PlansListTable();
+        $plans_table->prepare_items();
         ?>
-    <div class="wrap upmkt-admin">
-        <h1 class="wp-heading-inline">Planos de Assinatura</h1>
-        <a href="<?php echo admin_url('admin.php?page=upmkt-subscription-plans&action=add'); ?>" class="page-title-action">
-            Adicionar Novo
-        </a>
-        
-        <div class="upmkt-card">
-            <p>Lista de planos será implementada em breve.</p>
-            <p>Por enquanto, você pode gerenciar os planos diretamente no banco de dados na tabela <code><?php global $wpdb;
-        echo $wpdb->prefix; ?>upmkt_subscription_plans</code></p>
-        </div>
-    </div>
-    <?php
+					<div class="wrap upmkt-admin">
+							<h1 class="wp-heading-inline">Planos de Assinatura</h1>
+							<a href="<?php echo admin_url('admin.php?page=upmkt-subscription-plans&action=add'); ?>" class="page-title-action">
+									Adicionar Novo
+							</a>
+							
+							<form method="get">
+									<input type="hidden" name="page" value="upmkt-subscription-plans">
+									<?php $plans_table->display(); ?>
+							</form>
+					</div>
+				<?php
     }
 
     /**
@@ -246,18 +439,166 @@ class AdminMenu
         $plan_id = $_GET['plan_id'] ?? 0;
         $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($plan_id);
 
-        // TODO: Implementar formulário de edição de plano
+        $is_editing = $plan->exists();
+
         ?>
-        <div class="wrap upmkt-admin">
-            <h1 class="wp-heading-inline">
-                <?php echo $plan->exists() ? 'Editar Plano' : 'Adicionar Novo Plano'; ?>
-            </h1>
-            
-            <div class="upmkt-card">
-                <p>Formulário de edição de plano será implementado aqui.</p>
-            </div>
+    	<div class="wrap upmkt-admin">
+        <h1 class="wp-heading-inline">
+            <?php echo $is_editing ? 'Editar Plano' : 'Adicionar Novo Plano'; ?>
+        </h1>
+        
+        <a href="<?php echo admin_url('admin.php?page=upmkt-subscription-plans'); ?>" class="page-title-action">
+            ← Voltar para Lista
+        </a>
+               
+        <div class="upmkt-card">
+            <form method="post">
+                <?php wp_nonce_field('upmkt_save_plan', 'upmkt_plan_nonce'); ?>
+                
+                <table class="form-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><label for="plan_name">Nome do Plano</label></th>
+                            <td>
+                                <input type="text" 
+                                       id="plan_name" 
+                                       name="name" 
+                                       value="<?php echo esc_attr($plan->get_name()); ?>" 
+                                       class="regular-text" 
+                                       required>
+                                <p class="description">Nome exibido para os clientes.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_description">Descrição</label></th>
+                            <td>
+                                <textarea id="plan_description" 
+                                          name="description" 
+                                          class="large-text" 
+                                          rows="3"><?php echo esc_textarea($plan->get_description()); ?></textarea>
+                                <p class="description">Descrição detalhada do plano.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_price">Preço (R$)</label></th>
+                            <td>
+                                <input type="number" 
+                                       id="plan_price" 
+                                       name="price" 
+                                       value="<?php echo esc_attr($plan->get_price()); ?>" 
+                                       step="0.01" 
+                                       min="0" 
+                                       class="small-text" 
+                                       required>
+                                <p class="description">Valor da assinatura em reais.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_billing_period">Período de Cobrança</label></th>
+                            <td>
+                                <select id="plan_billing_period" name="billing_period" required>
+                                    <option value="day" <?php selected($plan->get_billing_period(), 'day'); ?>>Diário</option>
+                                    <option value="month" <?php selected($plan->get_billing_period(), 'month'); ?>>Mensal</option>
+                                    <option value="year" <?php selected($plan->get_billing_period(), 'year'); ?>>Anual</option>
+                                </select>
+                                <p class="description">Frequência da cobrança recorrente.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_billing_frequency">Frequência</label></th>
+                            <td>
+                                <input type="number" 
+                                       id="plan_billing_frequency" 
+                                       name="billing_frequency" 
+                                       value="<?php echo esc_attr($plan->get_billing_frequency()); ?>" 
+                                       min="1" 
+                                       class="small-text" 
+                                       required>
+                                <p class="description">Ex: 1 para mensal, 3 para trimestral.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_trial_period_days">Dias de Trial</label></th>
+                            <td>
+                                <input type="number" 
+                                       id="plan_trial_period_days" 
+                                       name="trial_period_days" 
+                                       value="<?php echo esc_attr($plan->get_trial_period_days()); ?>" 
+                                       min="0" 
+                                       class="small-text">
+                                <p class="description">Número de dias gratuitos (0 para nenhum trial).</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="plan_features">Recursos</label></th>
+                            <td>
+                                <textarea id="plan_features" 
+                                          name="features" 
+                                          class="large-text" 
+                                          rows="5"
+                                          placeholder="Cada recurso em uma linha"><?php
+                                        $features = $plan->get_features();
+        if (!empty($features)) {
+            echo esc_textarea(implode("\n", $features));
+        }
+        ?></textarea>
+                                <p class="description">Lista de recursos do plano (um por linha).</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">Status</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" 
+                                           name="is_active" 
+                                           value="1" 
+                                           <?php checked($plan->is_active()); ?>>
+                                    Plano ativo
+                                </label>
+                                <p class="description">Planos inativos não estarão disponíveis para novos assinantes.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p class="submit">
+                    <input type="submit" 
+                           name="submit_plan" 
+                           class="button button-primary" 
+                           value="<?php echo $is_editing ? 'Atualizar Plano' : 'Criar Plano'; ?>">
+                    
+                    <?php if ($is_editing): ?>
+											<a href="<?php echo wp_nonce_url(
+											    admin_url('admin.php?page=upmkt-subscription-plans&action=delete&plan_id=' . $plan->get_id()),
+											    'delete_plan_' . $plan->get_id()
+											); ?>" 
+												class="button button-link-delete" 
+												style="color:#a00;"
+												onclick="return confirm('Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.')">
+													Excluir Plano
+											</a>
+                    <?php endif; ?>
+                </p>
+            </form>
         </div>
-        <?php
+			</div>
+			<?php
+    }
+
+    /**
+     * Atualiza entidade do plano usando os métodos setters
+     */
+    private function update_plan_entity(\UPMarket\Subscriptions\Entities\SubscriptionPlan $plan, array $data): bool
+    {
+        // AGORA USANDO O MÉTODO UPDATE CORRETO
+        return $plan->update($data);
     }
 
     /**

@@ -40,7 +40,7 @@ interface SubscriptionPlanInterface
     /**
      * Retorna o período de cobrança
      *
-     * @return string (monthly, yearly, weekly, etc)
+     * @return string (monthly, yearly, etc)
      */
     public function get_billing_period(): string;
 

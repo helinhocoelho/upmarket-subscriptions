@@ -355,9 +355,6 @@ class SubscriptionManager
                 case 'day':
                     $next_date->modify("+{$frequency} days");
                     break;
-                case 'week':
-                    $next_date->modify("+{$frequency} weeks");
-                    break;
                 case 'month':
                     $next_date->modify("+{$frequency} months");
                     break;

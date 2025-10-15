@@ -59,6 +59,8 @@ class SubscriptionsListTable extends \WP_List_Table
      */
     public function prepare_items(): void
     {
+        $this->process_bulk_action();
+
         global $wpdb;
 
         $columns = $this->get_columns();
@@ -237,4 +239,101 @@ class SubscriptionsListTable extends \WP_List_Table
     {
         echo 'Nenhuma assinatura encontrada.';
     }
+
+    /**
+     * Ações em massa
+     */
+    public function get_bulk_actions(): array
+    {
+        return [
+            'cancel' => 'Cancelar',
+            'activate' => 'Ativar',
+            'delete' => 'Excluir'
+        ];
+    }
+
+    /**
+     * Processa ações em massa
+     */
+    public function process_bulk_action(): void
+    {
+        if (!isset($_POST['subscription']) || !is_array($_POST['subscription'])) {
+            return;
+        }
+
+        $subscription_ids = array_map('intval', $_POST['subscription']);
+        $action = $this->current_action();
+
+        if (!$action) {
+            return;
+        }
+
+        foreach ($subscription_ids as $subscription_id) {
+            switch ($action) {
+                case 'cancel':
+                    $this->cancel_subscription($subscription_id);
+                    break;
+                case 'activate':
+                    $this->activate_subscription($subscription_id);
+                    break;
+                case 'delete':
+                    $this->delete_subscription($subscription_id);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Cancela uma assinatura
+     */
+    private function cancel_subscription(int $subscription_id): void
+    {
+        try {
+            $subscription = new \UPMarket\Subscriptions\Entities\Subscription($subscription_id);
+            if ($subscription->exists()) {
+                $subscription->cancel();
+                $subscription->save();
+            }
+        } catch (\Exception $e) {
+            // Log error
+        }
+    }
+
+    /**
+     * Ativa uma assinatura
+     */
+    private function activate_subscription(int $subscription_id): void
+    {
+        try {
+            $subscription = new \UPMarket\Subscriptions\Entities\Subscription($subscription_id);
+            if ($subscription->exists()) {
+                $subscription->set_status('active');
+                $subscription->save();
+            }
+        } catch (\Exception $e) {
+            // Log error
+        }
+    }
+
+    /**
+     * Exclui uma assinatura
+     */
+    private function delete_subscription(int $subscription_id): void
+    {
+        global $wpdb;
+
+        $wpdb->delete(
+            $wpdb->prefix . 'upmkt_subscriptions',
+            ['id' => $subscription_id],
+            ['%d']
+        );
+
+        // Também exclui metadados
+        $wpdb->delete(
+            $wpdb->prefix . 'upmkt_subscription_meta',
+            ['subscription_id' => $subscription_id],
+            ['%d']
+        );
+    }
+
 }

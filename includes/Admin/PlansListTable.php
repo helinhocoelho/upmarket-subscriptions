@@ -58,6 +58,8 @@ class PlansListTable extends \WP_List_Table
      */
     public function prepare_items(): void
     {
+        $this->process_bulk_action();
+
         global $wpdb;
 
         $columns = $this->get_columns();
@@ -167,7 +169,6 @@ class PlansListTable extends \WP_List_Table
     {
         $periods = [
             'day' => 'Dia',
-            'week' => 'Semana',
             'month' => 'Mês',
             'year' => 'Ano'
         ];
@@ -225,4 +226,82 @@ class PlansListTable extends \WP_List_Table
             'delete' => 'Excluir'
         ];
     }
+
+    /**
+     * Processa ações em massa
+     */
+    public function process_bulk_action(): void
+    {
+        if (!isset($_POST['plan']) || !is_array($_POST['plan'])) {
+            return;
+        }
+
+        $plan_ids = array_map('intval', $_POST['plan']);
+        $action = $this->current_action();
+
+        if (!$action) {
+            return;
+        }
+
+        foreach ($plan_ids as $plan_id) {
+            switch ($action) {
+                case 'activate':
+                    $this->activate_plan($plan_id);
+                    break;
+                case 'deactivate':
+                    $this->deactivate_plan($plan_id);
+                    break;
+                case 'delete':
+                    $this->delete_plan($plan_id);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Ativa um plano
+     */
+    private function activate_plan(int $plan_id): void
+    {
+        global $wpdb;
+
+        $wpdb->update(
+            $wpdb->prefix . 'upmkt_subscription_plans',
+            ['is_active' => 1],
+            ['id' => $plan_id],
+            ['%d'],
+            ['%d']
+        );
+    }
+
+    /**
+     * Desativa um plano
+     */
+    private function deactivate_plan(int $plan_id): void
+    {
+        global $wpdb;
+
+        $wpdb->update(
+            $wpdb->prefix . 'upmkt_subscription_plans',
+            ['is_active' => 0],
+            ['id' => $plan_id],
+            ['%d'],
+            ['%d']
+        );
+    }
+
+    /**
+     * Exclui um plano
+     */
+    private function delete_plan(int $plan_id): void
+    {
+        global $wpdb;
+
+        $wpdb->delete(
+            $wpdb->prefix . 'upmkt_subscription_plans',
+            ['id' => $plan_id],
+            ['%d']
+        );
+    }
+
 }

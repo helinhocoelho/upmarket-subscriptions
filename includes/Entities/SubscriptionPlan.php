@@ -157,6 +157,50 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
     }
 
     /**
+     * Atualiza os dados do plano usando os setters
+     *
+     * @param array $data
+     * @return bool
+     */
+    public function update(array $data): bool
+    {
+        // Atualizar propriedades usando os setters
+        if (isset($data['name'])) {
+            $this->set_name($data['name']);
+        }
+
+        if (isset($data['description'])) {
+            $this->set_description($data['description']);
+        }
+
+        if (isset($data['price'])) {
+            $this->set_price($data['price']);
+        }
+
+        if (isset($data['billing_period'])) {
+            $this->set_billing_period($data['billing_period']);
+        }
+
+        if (isset($data['billing_frequency'])) {
+            $this->set_billing_frequency($data['billing_frequency']);
+        }
+
+        if (isset($data['trial_period_days'])) {
+            $this->set_trial_period_days($data['trial_period_days']);
+        }
+
+        if (isset($data['is_active'])) {
+            $this->set_active($data['is_active']);
+        }
+
+        if (isset($data['features'])) {
+            $this->set_features($data['features']);
+        }
+
+        return $this->save();
+    }
+
+    /**
      * Retorna todos os planos ativos
      *
      * @return array

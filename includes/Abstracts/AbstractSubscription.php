@@ -186,9 +186,6 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
             case 'day':
                 $interval = new \DateInterval("P{$billing_frequency}D");
                 break;
-            case 'week':
-                $interval = new \DateInterval("P{$billing_frequency}W");
-                break;
             case 'month':
                 $interval = new \DateInterval("P{$billing_frequency}M");
                 break;
