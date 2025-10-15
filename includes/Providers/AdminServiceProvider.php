@@ -3,6 +3,7 @@
 namespace UPMarket\Subscriptions\Providers;
 
 use UPMarket\Subscriptions\Admin\AdminMenu;
+use UPMarket\Subscriptions\Admin\GatewaySettings;
 
 /**
  * Service Provider para funcionalidades do Admin
@@ -17,10 +18,8 @@ class AdminServiceProvider
     public function register(): void
     {
         new AdminMenu();
+        new GatewaySettings();
 
-        // TODO: Adicionar outros componentes do admin
-
-        // Hook para extensões
         do_action('upmkt_register_admin');
     }
 }

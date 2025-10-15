@@ -269,16 +269,142 @@ class AdminMenu
             wp_die('Você não tem permissão para acessar esta página.');
         }
 
-        // TODO: Implementar configurações
+        $active_tab = $_GET['tab'] ?? 'general';
         ?>
-        <div class="wrap upmkt-admin">
-            <h1>Configurações - Assinaturas</h1>
+    <div class="wrap upmkt-admin">
+        <h1>Configurações - Assinaturas</h1>
+        
+        <nav class="nav-tab-wrapper">
+            <a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
+                Geral
+            </a>
+            <?php do_action('upmkt_admin_settings_tabs'); ?>
+        </nav>
+        
+        <div class="upmkt-settings-content">
+            <?php if ($active_tab === 'general'): ?>
+                <div id="general" class="tab-content active">
+                    <div class="upmkt-card">
+                        <h2>Configurações Gerais</h2>
+                        <p>Configurações gerais do sistema de assinaturas.</p>
+                        <!-- Adicione campos gerais aqui no futuro -->
+                    </div>
+                </div>
+            <?php endif; ?>
             
-            <div class="upmkt-card">
-                <p>Configurações do plugin serão implementadas aqui.</p>
-            </div>
+            <?php do_action('upmkt_admin_settings_content'); ?>
         </div>
-        <?php
+    </div>
+    
+    <style>
+    .nav-tab-wrapper {
+        margin-bottom: 20px;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .upmkt-gateway-settings {
+        margin-bottom: 20px;
+    }
+    
+    .upmkt-gateway-status {
+        float: right;
+        font-size: 0.8em;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-weight: normal;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .upmkt-gateway-actions {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+    }
+    
+    .upmkt-test-result {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    
+    .upmkt-test-result.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .upmkt-test-result.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    </style>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        // Tab navigation
+        $('.nav-tab').on('click', function(e) {
+            e.preventDefault();
+            var target = $(this).attr('href');
+            
+            $('.nav-tab').removeClass('nav-tab-active');
+            $('.tab-content').removeClass('active');
+            
+            $(this).addClass('nav-tab-active');
+            $(target).addClass('active');
+        });
+        
+        // Test connection buttons
+        $('.upmkt-test-connection').on('click', function() {
+            var $button = $(this);
+            var gatewayId = $button.data('gateway');
+            var $result = $('#upmkt-test-result-' + gatewayId);
+            
+            $button.prop('disabled', true).text('Testando...');
+            $result.hide().removeClass('success error');
+            
+            $.ajax({
+                url: upmkt_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'upmkt_test_gateway_connection',
+                    gateway_id: gatewayId,
+                    nonce: upmkt_admin.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $result.html(response.data.message).addClass('success').show();
+                    } else {
+                        $result.html(response.data.message).addClass('error').show();
+                    }
+                },
+                error: function() {
+                    $result.html('Erro de conexão.').addClass('error').show();
+                },
+                complete: function() {
+                    $button.prop('disabled', false).text('Testar Conexão');
+                }
+            });
+        });
+    });
+    </script>
+    <?php
     }
 
     /**

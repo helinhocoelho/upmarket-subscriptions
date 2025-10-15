@@ -47,6 +47,7 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
     protected function init_settings(): void
     {
         $this->settings = get_option("upmkt_gateway_{$this->id}_settings", []);
+        $this->enabled = ($this->get_setting('enabled') === 'yes') && $this->is_configured();
     }
 
     /**

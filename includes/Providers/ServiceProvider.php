@@ -33,7 +33,11 @@ class ServiceProvider
             return new CronHandlers();
         });
 
-        // Outros serviços podem ser registrados aqui
+        $container->singleton('webhook_handlers', function () {
+            return new WebhookHandlers();
+        });
+
+
         do_action('upmkt_register_services', $container);
     }
 }
