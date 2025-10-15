@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name: UP Market Subscriptions
- * Plugin URI: https://www.museudainquisicao.org.br
+ * Plugin URI: https://upmarket.com.br
  * Description: Sistema de assinaturas recorrentes personalizado
  * Version: 1.0.0
  * Author: UP Market - Hélio Coelho
- * Author URI: https://upmarket.com.br/
  * Text Domain: upmarket-subscriptions
  * Domain Path: /languages
  * Requires PHP: 7.4
@@ -38,7 +37,11 @@ if (!file_exists(UPMS_PLUGIN_PATH . 'vendor/autoload.php')) {
 }
 
 // Carrega o autoloader do Composer
-require_once UPMS_PLUGIN_PATH . 'vendor/autoload.php';
+if (file_exists(UPMS_PLUGIN_PATH . 'vendor/autoload.php')) {
+    require_once UPMS_PLUGIN_PATH . 'vendor/autoload.php';
+} else {
+    require_once UPMS_PLUGIN_PATH . 'includes/autoload.php';
+}
 
 // Inicializa o plugin
 add_action('plugins_loaded', function () {
