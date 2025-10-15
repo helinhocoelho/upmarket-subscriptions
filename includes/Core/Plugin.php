@@ -2,7 +2,9 @@
 
 namespace UPMarket\Subscriptions\Core;
 
+// Adicione estes use statements no topo do arquivo
 use UPMarket\Subscriptions\Providers\GatewayServiceProvider;
+use UPMarket\Subscriptions\Providers\ServiceProvider;
 
 /**
  * Classe principal do plugin
@@ -67,8 +69,13 @@ class Plugin
      */
     private function register_service_providers(): void
     {
+        // Gateway Service Provider
         $gateway_provider = new GatewayServiceProvider();
         $gateway_provider->register($this->container->gateway_manager);
+
+        // Main Service Provider
+        $service_provider = new ServiceProvider();
+        $service_provider->register($this->container);
     }
 
     /**
