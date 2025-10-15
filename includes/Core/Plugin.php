@@ -6,6 +6,7 @@ namespace UPMarket\Subscriptions\Core;
 use UPMarket\Subscriptions\Providers\ServiceProvider;
 use UPMarket\Subscriptions\Providers\GatewayServiceProvider;
 use UPMarket\Subscriptions\Providers\ShortcodeServiceProvider;
+use UPMarket\Subscriptions\Providers\AdminServiceProvider;
 
 /**
  * Classe principal do plugin
@@ -73,6 +74,10 @@ class Plugin
         // Main Service Provider
         $service_provider = new ServiceProvider();
         $service_provider->register($this->container);
+
+        // Admin Service Provider
+        $admin_provider = new AdminServiceProvider();
+        $admin_provider->register();
 
         // Gateway Service Provider
         $gateway_provider = new GatewayServiceProvider();
