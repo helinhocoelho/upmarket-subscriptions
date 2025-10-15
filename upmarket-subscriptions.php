@@ -16,13 +16,13 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constantes do plugin
-define('UPMS_PLUGIN_FILE', __FILE__);
-define('UPMS_PLUGIN_PATH', plugin_dir_path(__FILE__));
-define('UPMS_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('UPMS_VERSION', '1.0.0');
+define('UPMKT_PLUGIN_FILE', __FILE__);
+define('UPMKT_PLUGIN_PATH', plugin_dir_path(__FILE__));
+define('UPMKT_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('UPMKT_VERSION', '1.0.0');
 
 // Verifica se Composer está carregado
-if (!file_exists(UPMS_PLUGIN_PATH . 'vendor/autoload.php')) {
+if (!file_exists(UPMKT_PLUGIN_PATH . 'vendor/autoload.php')) {
     add_action('admin_notices', function () {
         ?>
         <div class="notice notice-error">
@@ -37,10 +37,10 @@ if (!file_exists(UPMS_PLUGIN_PATH . 'vendor/autoload.php')) {
 }
 
 // Carrega o autoloader do Composer
-if (file_exists(UPMS_PLUGIN_PATH . 'vendor/autoload.php')) {
-    require_once UPMS_PLUGIN_PATH . 'vendor/autoload.php';
+if (file_exists(UPMKT_PLUGIN_PATH . 'vendor/autoload.php')) {
+    require_once UPMKT_PLUGIN_PATH . 'vendor/autoload.php';
 } else {
-    require_once UPMS_PLUGIN_PATH . 'includes/autoload.php';
+    require_once UPMKT_PLUGIN_PATH . 'includes/autoload.php';
 }
 
 // Inicializa o plugin

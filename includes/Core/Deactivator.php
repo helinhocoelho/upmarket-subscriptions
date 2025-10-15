@@ -14,9 +14,7 @@ class Deactivator
      */
     public static function deactivate(): void
     {
-        // Remove eventos cron
         self::clear_scheduled_events();
-
         flush_rewrite_rules();
     }
 
@@ -25,6 +23,14 @@ class Deactivator
      */
     private static function clear_scheduled_events(): void
     {
-        // Implementaremos no sistema de recorrência
+        $timestamp = wp_next_scheduled('upmkt_daily_subscription_check');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'upmkt_daily_subscription_check');
+        }
+
+        $timestamp = wp_next_scheduled('upmkt_hourly_payment_retry');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'upmkt_hourly_payment_retry');
+        }
     }
 }

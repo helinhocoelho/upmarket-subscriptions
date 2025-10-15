@@ -53,7 +53,7 @@ class GatewayManager
     private function register_default_gateways(): void
     {
         // Gateways serão registrados via método register_gateway()
-        do_action('upms_register_gateways', $this);
+        do_action('upmkt_register_gateways', $this);
     }
 
     /**

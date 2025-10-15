@@ -46,7 +46,7 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
      */
     protected function init_settings(): void
     {
-        $this->settings = get_option("upms_gateway_{$this->id}_settings", []);
+        $this->settings = get_option("upmkt_gateway_{$this->id}_settings", []);
     }
 
     /**
@@ -82,12 +82,12 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
     protected function log(string $message, string $level = 'info'): void
     {
         $logger = function ($message) use ($level) {
-            error_log("[UPMS Gateway {$this->id} - {$level}] {$message}");
+            error_log("[UPMKT Gateway {$this->id} - {$level}] {$message}");
         };
 
         if (function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->log($level, $message, ['source' => "upms-gateway-{$this->id}"]);
+            $logger->log($level, $message, ['source' => "upmkt-gateway-{$this->id}"]);
         } else {
             $logger($message);
         }

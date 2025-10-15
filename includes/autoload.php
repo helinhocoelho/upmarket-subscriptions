@@ -30,7 +30,7 @@ spl_autoload_register(function ($class) {
     $relative_class = substr($class, $len);
 
     // Converte namespace para caminho de arquivo
-    $file = UPMS_PLUGIN_PATH . 'includes/' . str_replace('\\', '/', $relative_class) . '.php';
+    $file = UPMKT_PLUGIN_PATH . 'includes/' . str_replace('\\', '/', $relative_class) . '.php';
 
     // Se o arquivo existe, carrega
     if (file_exists($file)) {

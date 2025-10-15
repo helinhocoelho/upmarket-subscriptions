@@ -30,7 +30,7 @@ class Logger
     private function __construct()
     {
         $this->debug_enabled = defined('WP_DEBUG') && WP_DEBUG;
-        $this->log_file = WP_CONTENT_DIR . '/upms-debug.log';
+        $this->log_file = WP_CONTENT_DIR . '/upmkt-debug.log';
 
         add_action('init', [$this, 'init']);
     }
@@ -54,7 +54,7 @@ class Logger
     public function init(): void
     {
         if ($this->debug_enabled) {
-            add_action('upms_log', [$this, 'log'], 10, 3);
+            add_action('upmkt_log', [$this, 'log'], 10, 3);
         }
     }
 
@@ -79,7 +79,7 @@ class Logger
 
         // Log para error_log se for erro
         if (in_array($level, ['error', 'critical'])) {
-            error_log("UPMS {$level}: {$message}");
+            error_log("UPMKT {$level}: {$message}");
         }
     }
 

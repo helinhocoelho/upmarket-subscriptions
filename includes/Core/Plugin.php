@@ -2,6 +2,8 @@
 
 namespace UPMarket\Subscriptions\Core;
 
+use UPMarket\Subscriptions\Providers\GatewayServiceProvider;
+
 /**
  * Classe principal do plugin
  *
@@ -15,7 +17,7 @@ class Plugin
     private static $instance = null;
 
     /**
-     * @var Container Instância do container para dependências
+     * @var Container Instância do container de dependências
      */
     private $container;
 
@@ -47,10 +49,26 @@ class Plugin
      */
     private function register_services(): void
     {
-        // Serviços core serão registrados aqui
-        $this->container->singleton('subscription_manager', function () {
-            return new \UPMarket\Subscriptions\Services\SubscriptionManager();
+        // Serviços core
+        $this->container->singleton('gateway_manager', function () {
+            return GatewayManager::instance();
         });
+
+        $this->container->singleton('logger', function () {
+            return Logger::instance();
+        });
+
+        // Service Providers
+        $this->register_service_providers();
+    }
+
+    /**
+     * Registra os Service Providers
+     */
+    private function register_service_providers(): void
+    {
+        $gateway_provider = new GatewayServiceProvider();
+        $gateway_provider->register($this->container->gateway_manager);
     }
 
     /**
@@ -59,6 +77,7 @@ class Plugin
     private function init_hooks(): void
     {
         add_action('init', [$this, 'init_plugin']);
+        add_action('wp_loaded', [$this, 'load_webhooks']);
     }
 
     /**
@@ -66,7 +85,32 @@ class Plugin
      */
     public function init_plugin(): void
     {
-        do_action('upms_plugin_loaded');
+        $this->load_textdomain();
+        do_action('upmkt_plugin_loaded');
+    }
+
+    /**
+     * Carrega webhooks
+     */
+    public function load_webhooks(): void
+    {
+        if (isset($_GET['upmkt_webhook'])) {
+            $gateway_id = sanitize_text_field($_GET['upmkt_webhook']);
+            $this->container->gateway_manager->process_webhook($gateway_id);
+            exit;
+        }
+    }
+
+    /**
+     * Carrega traduções
+     */
+    private function load_textdomain(): void
+    {
+        load_plugin_textdomain(
+            'upmarket-subscriptions',
+            false,
+            dirname(plugin_basename(UPMKT_PLUGIN_FILE)) . '/languages'
+        );
     }
 
     /**
