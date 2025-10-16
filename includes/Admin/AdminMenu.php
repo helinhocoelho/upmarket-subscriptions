@@ -20,6 +20,45 @@ class AdminMenu
     }
 
     /**
+     * Adiciona mensagem de notificação no admin
+     */
+    private function add_admin_notice(string $message, string $type = 'success'): void
+    {
+        add_action('admin_notices', function () use ($message, $type) {
+            ?>
+        <div class="notice notice-<?php echo esc_attr($type); ?> is-dismissible">
+            <p><b><?php echo esc_html($message); ?></b></p>
+        </div>
+        <?php
+        });
+    }
+
+    /**
+     * Verifica se o usuário atual tem permissão
+     */
+    private function current_user_can_manage(): bool
+    {
+        return current_user_can('manage_upmkt_subscriptions');
+    }
+
+    /**
+     * Valida e sanitiza dados do formulário
+     */
+    private function sanitize_plan_data(array $data): array
+    {
+        return [
+            'name' => sanitize_text_field($data['name'] ?? ''),
+            'description' => sanitize_textarea_field($data['description'] ?? ''),
+            'price' => floatval($data['price'] ?? 0),
+            'billing_period' => sanitize_text_field($data['billing_period'] ?? 'month'),
+            'billing_frequency' => intval($data['billing_frequency'] ?? 1),
+            'trial_period_days' => intval($data['trial_period_days'] ?? 0),
+            'is_active' => isset($data['is_active']),
+            'features' => array_filter(array_map('trim', explode("\n", sanitize_textarea_field($data['features'] ?? ''))))
+        ];
+    }
+
+    /**
      * Manipula ações de planos (exclusão, salvamento, etc)
      */
     public function handle_plan_actions(): void
@@ -46,11 +85,13 @@ class AdminMenu
     private function handle_plan_save(): void
     {
         if (!wp_verify_nonce($_POST['upmkt_plan_nonce'], 'upmkt_save_plan')) {
-            wp_die('Erro de segurança. Nonce inválido.');
+            $this->add_admin_notice('Erro de segurança. Nonce inválido.', 'error');
+            return;
         }
 
         if (!current_user_can('manage_upmkt_subscriptions')) {
-            wp_die('Sem permissão para salvar planos.');
+            $this->add_admin_notice('Sem permissão para salvar planos.', 'error');
+            return;
         }
 
         $plan_id = $_GET['plan_id'] ?? 0;
@@ -65,16 +106,16 @@ class AdminMenu
             $trial_period_days = intval($_POST['trial_period_days'] ?? 0);
             $is_active = isset($_POST['is_active']);
 
-            // Processar features
-            $features_text = sanitize_textarea_field($_POST['features'] ?? '');
-            $features = array_filter(array_map('trim', explode("\n", $features_text)));
-
-            // Validações
+            // Validações avançadas
             if (empty($name)) {
                 throw new \Exception('O nome do plano é obrigatório.');
             }
 
-            if ($price <= 0) {
+            if ($price < 0) {
+                throw new \Exception('O preço não pode ser negativo.');
+            }
+
+            if ($price == 0) {
                 throw new \Exception('O preço deve ser maior que zero.');
             }
 
@@ -82,9 +123,18 @@ class AdminMenu
                 throw new \Exception('A frequência deve ser pelo menos 1.');
             }
 
+            $allowed_periods = ['day', 'month', 'year'];
+            if (!in_array($billing_period, $allowed_periods)) {
+                throw new \Exception('Período de cobrança inválido.');
+            }
+
             if ($trial_period_days < 0) {
                 throw new \Exception('Os dias de trial não podem ser negativos.');
             }
+
+            // Processar features
+            $features_text = sanitize_textarea_field($_POST['features'] ?? '');
+            $features = array_filter(array_map('trim', explode("\n", $features_text)));
 
             $is_new = !$plan->exists();
 
@@ -130,16 +180,15 @@ class AdminMenu
                 }
             }
 
-            // Redirecionar para a lista de planos com mensagem de sucesso
+            // Redirecionar com segurança
             $redirect_url = admin_url('admin.php?page=upmkt-subscription-plans');
             $redirect_url = add_query_arg('message', $message, $redirect_url);
 
-            wp_safe_redirect($redirect_url);
+            wp_safe_redirect(esc_url_raw($redirect_url));
             exit;
 
         } catch (\Exception $e) {
-            // Em caso de erro, mostrar mensagem de erro
-            wp_die('Erro ao salvar plano: ' . $e->getMessage());
+            $this->add_admin_notice('Erro ao salvar plano: ' . $e->getMessage(), 'error');
         }
     }
 
@@ -300,27 +349,59 @@ class AdminMenu
             wp_die('Você não tem permissão para acessar esta página.');
         }
 
-        $subscriptions_table = new SubscriptionsListTable();
+        $action = $_GET['action'] ?? 'list';
+        $subscription_id = $_GET['subscription_id'] ?? 0;
+
+        // Se for edição, mostrar página de edição
+        if ($action === 'edit' && $subscription_id) {
+            $subscription_edit = new \UPMarket\Subscriptions\Admin\SubscriptionEdit();
+            $subscription_edit->render_edit_page($subscription_id);
+            return;
+        }
+
+        // Caso contrário, mostrar lista
+        $subscriptions_table = new \UPMarket\Subscriptions\Admin\SubscriptionsListTable();
         $subscriptions_table->prepare_items();
         ?>
-    <div class="wrap upmkt-admin">
-        <h1 class="wp-heading-inline">Todas as Assinaturas</h1>
-        
-        <div class="upmkt-admin-actions">
-            <a href="<?php echo admin_url('admin.php?page=upmkt-subscriptions&action=export'); ?>" class="button">
-                Exportar CSV
-            </a>
-        </div>
-        
-        <form method="get">
-            <input type="hidden" name="page" value="upmkt-subscriptions-list">
-            <?php
-                $subscriptions_table->search_box('Buscar assinaturas', 'search');
+					<div class="wrap upmkt-admin">
+							<h1 class="wp-heading-inline">Todas as Assinaturas</h1>
+							
+							<?php $this->render_subscriptions_admin_notices(); ?>
+							
+							<div class="upmkt-admin-actions">
+									<a href="<?php echo admin_url('admin.php?page=upmkt-subscriptions&action=export'); ?>" class="button">
+											Exportar CSV
+									</a>
+							</div>
+							
+							<form method="get">
+									<input type="hidden" name="page" value="upmkt-subscriptions-list">
+									<?php
+                                                    $subscriptions_table->search_box('Buscar assinaturas', 'search');
         $subscriptions_table->display();
         ?>
-        </form>
-    </div>
-    <?php
+							</form>
+					</div>
+				<?php
+    }
+
+    /**
+     * Renderiza notificações para assinaturas
+     */
+    private function render_subscriptions_admin_notices(): void
+    {
+        if (isset($_GET['message'])) {
+            $messages = [
+                'updated' => 'Assinatura atualizada com sucesso!',
+                'cancelled' => 'Assinatura cancelada com sucesso!',
+                'resumed' => 'Assinatura retomada com sucesso!',
+                'deleted' => 'Assinatura excluída com sucesso!'
+            ];
+
+            $message = $messages[$_GET['message']] ?? 'Ação realizada com sucesso!';
+
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+        }
     }
 
     /**
@@ -345,7 +426,7 @@ class AdminMenu
     }
 
     /**
-     * Manipula exclusão de plano (agora chamado via admin_init)
+     * Manipula exclusão de plano com notificações melhoradas
      */
     private function handle_plan_deletion(): void
     {
@@ -353,11 +434,13 @@ class AdminMenu
         $nonce = $_GET['_wpnonce'] ?? '';
 
         if (!$plan_id || !wp_verify_nonce($nonce, 'delete_plan_' . $plan_id)) {
-            wp_die('Erro de segurança.');
+            $this->add_admin_notice('Erro de segurança.', 'error');
+            return;
         }
 
         if (!current_user_can('manage_upmkt_subscriptions')) {
-            wp_die('Sem permissão para excluir planos.');
+            $this->add_admin_notice('Sem permissão para excluir planos.', 'error');
+            return;
         }
 
         global $wpdb;
@@ -371,9 +454,7 @@ class AdminMenu
         );
 
         if ($subscriptions_count > 0) {
-            add_action('admin_notices', function () {
-                echo '<div class="notice notice-error"><p>Não é possível excluir este plano pois existem assinaturas ativas vinculadas a ele.</p></div>';
-            });
+            $this->add_admin_notice('Não é possível excluir este plano pois existem assinaturas ativas vinculadas a ele.', 'error');
             return;
         }
 
@@ -385,12 +466,10 @@ class AdminMenu
         );
 
         if ($deleted) {
-            wp_safe_redirect(admin_url('admin.php?page=upmkt-subscription-plans&message=deleted'));
+            wp_safe_redirect(esc_url_raw(admin_url('admin.php?page=upmkt-subscription-plans&message=deleted')));
             exit;
         } else {
-            add_action('admin_notices', function () {
-                echo '<div class="notice notice-error"><p>Erro ao excluir plano.</p></div>';
-            });
+            $this->add_admin_notice('Erro ao excluir plano.', 'error');
         }
     }
 
@@ -749,104 +828,180 @@ class AdminMenu
     }
 
     /**
-     * Retorna estatísticas para o dashboard
+     * Retorna estatísticas otimizadas para o dashboard
      */
     private function get_dashboard_stats(): array
     {
         global $wpdb;
 
-        $table_name = $wpdb->prefix . 'upmkt_subscriptions';
+        $subscriptions_table = $wpdb->prefix . 'upmkt_subscriptions';
+        $plans_table = $wpdb->prefix . 'upmkt_subscription_plans';
+
+        // Consulta única otimizada para todas as estatísticas
+        $stats = $wpdb->get_row("
+        SELECT 
+            COUNT(*) as total_subscriptions,
+            COUNT(CASE WHEN s.status = 'active' THEN 1 END) as active_subscriptions,
+            COUNT(CASE WHEN s.status = 'pending' THEN 1 END) as pending_payments,
+            COALESCE(SUM(CASE WHEN s.status = 'active' THEN p.price ELSE 0 END), 0) as monthly_revenue
+        FROM {$subscriptions_table} s
+        LEFT JOIN {$plans_table} p ON s.plan_id = p.id
+    ");
 
         return [
-            'total_subscriptions' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name}"),
-            'active_subscriptions' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'active'"),
-            'total_revenue' => 'R$ 0,00', // TODO: Calcular receita
-            'pending_payments' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending'")
+            'total_subscriptions' => $stats->total_subscriptions ?? 0,
+            'active_subscriptions' => $stats->active_subscriptions ?? 0,
+            'total_revenue' => 'R$ ' . number_format($stats->monthly_revenue ?? 0, 2, ',', '.'),
+            'pending_payments' => $stats->pending_payments ?? 0
         ];
     }
 
     /**
-     * Renderiza assinaturas recentes
+     * Calcula receita mensal real
+     */
+    private function calculate_monthly_revenue(): float
+    {
+        global $wpdb;
+
+        $subscriptions_table = $wpdb->prefix . 'upmkt_subscriptions';
+        $plans_table = $wpdb->prefix . 'upmkt_subscription_plans';
+
+        $revenue = $wpdb->get_var("
+        SELECT SUM(p.price) 
+        FROM {$subscriptions_table} s 
+        INNER JOIN {$plans_table} p ON s.plan_id = p.id 
+        WHERE s.status = 'active'
+    ");
+
+        return floatval($revenue ?? 0);
+    }
+
+    /**
+     * Renderiza assinaturas recentes com dados otimizados
      */
     private function render_recent_subscriptions(): void
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'upmkt_subscriptions';
-        $subscriptions = $wpdb->get_results(
-            "SELECT * FROM {$table_name} ORDER BY created_at DESC LIMIT 5"
-        );
+
+        // Consulta otimizada com JOIN para dados do usuário
+        $subscriptions = $wpdb->get_results("
+        SELECT s.*, u.display_name, u.user_email 
+        FROM {$table_name} s 
+        LEFT JOIN {$wpdb->users} u ON s.user_id = u.ID 
+        ORDER BY s.created_at DESC 
+        LIMIT 5
+    ");
 
         if (empty($subscriptions)) {
             echo '<p>Nenhuma assinatura encontrada.</p>';
             return;
         }
         ?>
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
+    <table class="wp-list-table widefat fixed striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuário</th>
+                <th>Plano</th>
+                <th>Status</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($subscriptions as $sub):
+                $plan_name = $this->get_plan_name($sub->plan_id);
+                ?>
                 <tr>
-                    <th>ID</th>
-                    <th>Usuário</th>
-                    <th>Status</th>
-                    <th>Data</th>
+                    <td><?php echo esc_html($sub->id); ?></td>
+                    <td>
+                        <?php if ($sub->display_name): ?>
+                            <a href="<?php echo esc_url(admin_url('user-edit.php?user_id=' . $sub->user_id)); ?>">
+                                <?php echo esc_html($sub->display_name); ?>
+                            </a>
+                            <br>
+                            <small><?php echo esc_html($sub->user_email); ?></small>
+                        <?php else: ?>
+                            Usuário #<?php echo esc_html($sub->user_id); ?>
+                        <?php endif; ?>
+                    </td>
+                    <td><?php echo esc_html($plan_name); ?></td>
+                    <td>
+                        <span class="upmkt-status upmkt-status-<?php echo esc_attr($sub->status); ?>">
+                            <?php echo esc_html($this->get_status_text($sub->status)); ?>
+                        </span>
+                    </td>
+                    <td><?php echo esc_html(date('d/m/Y H:i', strtotime($sub->created_at))); ?></td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($subscriptions as $sub): ?>
-                    <tr>
-                        <td><?php echo esc_html($sub->id); ?></td>
-                        <td>
-                            <?php
-                            $user = get_userdata($sub->user_id);
-                    echo $user ? esc_html($user->display_name) : 'Usuário #' . esc_html($sub->user_id);
-                    ?>
-                        </td>
-                        <td>
-                            <span class="upmkt-status upmkt-status-<?php echo esc_attr($sub->status); ?>">
-                                <?php echo esc_html($this->get_status_text($sub->status)); ?>
-                            </span>
-                        </td>
-                        <td><?php echo esc_html(date('d/m/Y', strtotime($sub->created_at))); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php
     }
 
     /**
-     * Renderiza gráfico de status
+     * Obtém nome do plano por ID
+     */
+    private function get_plan_name(int $plan_id): string
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'upmkt_subscription_plans';
+        $plan_name = $wpdb->get_var(
+            $wpdb->prepare("SELECT name FROM {$table_name} WHERE id = %d", $plan_id)
+        );
+
+        return $plan_name ?: 'Plano não encontrado';
+    }
+
+    /**
+     * Renderiza gráfico de status com dados otimizados
      */
     private function render_subscriptions_chart(): void
     {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'upmkt_subscriptions';
-        $status_counts = $wpdb->get_results(
-            "SELECT status, COUNT(*) as count FROM {$table_name} GROUP BY status"
-        );
+
+        // Consulta otimizada para status
+        $status_counts = $wpdb->get_results("
+        SELECT status, COUNT(*) as count 
+        FROM {$table_name} 
+        GROUP BY status 
+        ORDER BY count DESC
+    ");
 
         if (empty($status_counts)) {
             echo '<p>Nenhum dado disponível.</p>';
             return;
         }
+
+        $total = array_sum(array_column($status_counts, 'count'));
         ?>
-        <div class="upmkt-chart-container">
-            <?php foreach ($status_counts as $status): ?>
-                <div class="upmkt-chart-item">
-                    <div class="upmkt-chart-label">
-                        <?php echo esc_html($this->get_status_text($status->status)); ?>
-                    </div>
-                    <div class="upmkt-chart-bar">
-                        <div class="upmkt-chart-fill" style="width: <?php echo esc_attr(($status->count / array_sum(array_column($status_counts, 'count'))) * 100); ?>%"></div>
-                    </div>
-                    <div class="upmkt-chart-count">
-                        <?php echo esc_html($status->count); ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        <?php
+					<div class="upmkt-chart-container">
+							<?php foreach ($status_counts as $status):
+							    $percentage = $total > 0 ? ($status->count / $total) * 100 : 0;
+							    $status_text = $this->get_status_text($status->status);
+							    ?>
+									<div class="upmkt-chart-item">
+											<div class="upmkt-chart-label">
+													<?php echo esc_html($status_text); ?>
+											</div>
+											<div class="upmkt-chart-bar">
+													<div class="upmkt-chart-fill" 
+															style="width: <?php echo esc_attr($percentage); ?>%"
+															title="<?php echo esc_attr($status->count . ' ' . $status_text); ?>">
+													</div>
+											</div>
+											<div class="upmkt-chart-count">
+													<?php echo esc_html($status->count); ?> 
+													(<?php echo esc_html(number_format($percentage, 1)); ?>%)
+											</div>
+									</div>
+							<?php endforeach; ?>
+					</div>
+				<?php
     }
 
     /**
@@ -858,8 +1013,7 @@ class AdminMenu
             'active' => 'Ativa',
             'pending' => 'Pendente',
             'cancelled' => 'Cancelada',
-            'expired' => 'Expirada',
-            'paused' => 'Pausada'
+            'expired' => 'Expirada'
         ];
 
         return $statuses[$status] ?? $status;

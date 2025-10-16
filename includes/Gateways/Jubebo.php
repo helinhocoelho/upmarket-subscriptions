@@ -7,9 +7,9 @@ use UPMarket\Subscriptions\Interfaces\SubscriptionInterface;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Gateway de pagamento da Rede
+ * Gateway de pagamento da Jubebo
  */
-class Rede extends AbstractPaymentGateway
+class Jubebo extends AbstractPaymentGateway
 {
     private $api_url;
     private $pv;
@@ -18,8 +18,8 @@ class Rede extends AbstractPaymentGateway
 
     public function __construct()
     {
-        $this->id = 'rede';
-        $this->name = 'Rede';
+        $this->id = 'jubebo';
+        $this->name = 'Jubebo';
         $this->init_settings();
 
         $this->setup_api_config();
@@ -83,7 +83,7 @@ class Rede extends AbstractPaymentGateway
             return $this->error_response([$response['message'] ?? 'Erro ao processar pagamento']);
 
         } catch (\Exception $e) {
-            Logger::instance()->error("Rede gateway error: " . $e->getMessage(), 'gateways');
+            Logger::instance()->error("Jubebo gateway error: " . $e->getMessage(), 'gateways');
             return $this->error_response(['Erro ao processar pagamento: ' . $e->getMessage()]);
         }
     }
@@ -98,7 +98,7 @@ class Rede extends AbstractPaymentGateway
             'gateways'
         );
 
-        $card_token = $subscription->get_meta('rede_card_token');
+        $card_token = $subscription->get_meta('jubebo_card_token');
         if (empty($card_token)) {
             return $this->error_response(['Token do cartão não encontrado para cobrança recorrente']);
         }
@@ -124,7 +124,7 @@ class Rede extends AbstractPaymentGateway
             return $this->error_response([$response['message'] ?? 'Erro ao processar cobrança recorrente']);
 
         } catch (\Exception $e) {
-            Logger::instance()->error("Rede recurring payment error: " . $e->getMessage(), 'gateways');
+            Logger::instance()->error("Jubebo recurring payment error: " . $e->getMessage(), 'gateways');
             return $this->error_response(['Erro ao processar cobrança recorrente: ' . $e->getMessage()]);
         }
     }
@@ -135,11 +135,11 @@ class Rede extends AbstractPaymentGateway
     public function cancel_subscription(SubscriptionInterface $subscription): bool
     {
         Logger::instance()->info(
-            "Canceling subscription {$subscription->get_id()} in Rede",
+            "Canceling subscription {$subscription->get_id()} in Jubebo",
             'gateways'
         );
 
-        // Na Rede, apenas marcamos como cancelado localmente
+        // Na Jubebo, apenas marcamos como cancelado localmente
         // Transações futuras não serão processadas
         return true;
     }
@@ -157,14 +157,14 @@ class Rede extends AbstractPaymentGateway
                 'message' => $response['message'] ?? 'Status verificado'
             ];
         } catch (\Exception $e) {
-            Logger::instance()->error("Rede status check error: " . $e->getMessage(), 'gateways');
+            Logger::instance()->error("Jubebo status check error: " . $e->getMessage(), 'gateways');
             return $this->error_response(['Erro ao verificar status: ' . $e->getMessage()]);
         }
     }
 
     /**
      * CORREÇÃO: Webhook atualizado para sistema dinâmico
-     * Processa webhooks da Rede
+     * Processa webhooks da Jubebo
      */
     public function process_webhook(array $webhook_data = []): void
     {
@@ -174,7 +174,7 @@ class Rede extends AbstractPaymentGateway
 
         $data = json_decode($input, true);
 
-        Logger::instance()->info('Rede webhook received: ' . $input, 'webhooks');
+        Logger::instance()->info('Jubebo webhook received: ' . $input, 'webhooks');
 
         if (empty($data)) {
             status_header(400);
@@ -240,7 +240,7 @@ class Rede extends AbstractPaymentGateway
     {
         $parent_fields = parent::get_settings_fields();
 
-        $rede_fields = [
+        $jubebo_fields = [
             'environment' => [
                 'title' => 'Ambiente',
                 'type' => 'select',
@@ -255,7 +255,7 @@ class Rede extends AbstractPaymentGateway
                 'title' => 'PV (Affiliation)',
                 'type' => 'text',
                 'default' => '',
-                'description' => 'Número do PV (affiliation) fornecido pela Rede.',
+                'description' => 'Número do PV (affiliation) fornecido pela Jubebo.',
                 'class' => 'regular-text',
                 'required' => true
             ],
@@ -263,7 +263,7 @@ class Rede extends AbstractPaymentGateway
                 'title' => 'Token',
                 'type' => 'password',
                 'default' => '',
-                'description' => 'Token de autenticação fornecido pela Rede.',
+                'description' => 'Token de autenticação fornecido pela Jubebo.',
                 'class' => 'regular-text',
                 'required' => true
             ]
@@ -277,7 +277,7 @@ class Rede extends AbstractPaymentGateway
         foreach ($parent_fields as $key => $field) {
             $final_fields[$key] = $field;
             if ($key === 'enabled') {
-                $final_fields = array_merge($final_fields, $rede_fields);
+                $final_fields = array_merge($final_fields, $jubebo_fields);
             }
         }
 
@@ -327,7 +327,7 @@ class Rede extends AbstractPaymentGateway
             if ($status_code === 404 || $status_code === 200) {
                 return [
                     'success' => true,
-                    'message' => 'Conexão com a API da Rede estabelecida com sucesso!'
+                    'message' => 'Conexão com a API da Jubebo estabelecida com sucesso!'
                 ];
             }
 
@@ -407,7 +407,7 @@ class Rede extends AbstractPaymentGateway
     private function save_card_token(SubscriptionInterface $subscription, string $card_token): void
     {
         if (!empty($card_token)) {
-            $subscription->set_meta('rede_card_token', $card_token);
+            $subscription->set_meta('jubebo_card_token', $card_token);
             $subscription->save();
         }
     }
@@ -442,7 +442,7 @@ class Rede extends AbstractPaymentGateway
      */
 
     /**
-     * Cria transação na Rede
+     * Cria transação na Jubebo
      */
     private function create_transaction(array $data): array
     {
@@ -507,7 +507,7 @@ class Rede extends AbstractPaymentGateway
         $result = json_decode($body, true);
         $status_code = wp_remote_retrieve_response_code($response);
 
-        Logger::instance()->debug('Rede API Response: ' . $body, 'gateways');
+        Logger::instance()->debug('Jubebo API Response: ' . $body, 'gateways');
 
         if ($status_code === 200 || $status_code === 201) {
             return [
@@ -538,7 +538,7 @@ class Rede extends AbstractPaymentGateway
     {
         // TODO: Implementar verificação de assinatura se necessário
         // Agora recebe headers do sistema dinâmico
-        Logger::instance()->info("Webhook signature verification for Rede", 'webhooks');
+        Logger::instance()->info("Webhook signature verification for Jubebo", 'webhooks');
         return true;
     }
 
@@ -577,7 +577,7 @@ class Rede extends AbstractPaymentGateway
         Logger::instance()->info("Transaction approved: {$transaction_id}", 'webhooks');
 
         // Mantém compatibilidade com handlers existentes
-        do_action('upmkt_rede_transaction_approved', $transaction_id, $reference, $data);
+        do_action('upmkt_jubebo_transaction_approved', $transaction_id, $reference, $data);
     }
 
     private function handle_transaction_denied(array $data): void
@@ -586,13 +586,13 @@ class Rede extends AbstractPaymentGateway
         $reference = $data['transaction']['reference'] ?? '';
 
         Logger::instance()->warning("Transaction denied: {$transaction_id}", 'webhooks');
-        do_action('upmkt_rede_transaction_denied', $transaction_id, $reference, $data);
+        do_action('upmkt_jubebo_transaction_denied', $transaction_id, $reference, $data);
     }
 
     private function handle_transaction_captured(array $data): void
     {
         $transaction_id = $data['transaction']['tid'] ?? '';
         Logger::instance()->info("Transaction captured: {$transaction_id}", 'webhooks');
-        do_action('upmkt_rede_transaction_captured', $transaction_id, $data);
+        do_action('upmkt_jubebo_transaction_captured', $transaction_id, $data);
     }
 }

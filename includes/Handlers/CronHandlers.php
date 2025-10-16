@@ -20,9 +20,10 @@ class CronHandlers
     /**
      * Construtor
      */
-    public function __construct()
+    public function __construct(SubscriptionManager $subscription_manager = null)
     {
-        $this->subscription_manager = new SubscriptionManager();
+        // Usa injeção de dependência ou busca do container
+        $this->subscription_manager = $subscription_manager ?? \UPMarket\Subscriptions\Core\Plugin::instance()->container()->subscription_manager;
         $this->init_hooks();
     }
 

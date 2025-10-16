@@ -6,29 +6,19 @@ use UPMarket\Subscriptions\Core\GatewayManager;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Configurações centralizadas para todos os gateways
- *
- * @package UPMarket\Subscriptions\Admin
+ * Configurações dinâmicas para gateways
  */
 class GatewaySettings
 {
-    /**
-     * @var GatewayManager
-     */
     private $gateway_manager;
+    private static $tabs_added = false;
 
-    /**
-     * Construtor
-     */
     public function __construct()
     {
         $this->gateway_manager = GatewayManager::instance();
         $this->init_hooks();
     }
 
-    /**
-     * Inicializa os hooks
-     */
     private function init_hooks(): void
     {
         add_action('admin_init', [$this, 'register_gateway_settings']);
@@ -37,214 +27,252 @@ class GatewaySettings
         add_action('wp_ajax_upmkt_test_gateway_connection', [$this, 'test_gateway_connection']);
     }
 
-    /**
-     * Registra configurações INDIVIDUAIS para cada gateway
-     */
     public function register_gateway_settings(): void
     {
         $gateways = $this->gateway_manager->get_gateways();
 
         foreach ($gateways as $gateway_id => $gateway) {
-            // Cada gateway tem SEU PRÓPRIO option no banco
             register_setting(
                 "upmkt_gateway_{$gateway_id}_settings",
-                "upmkt_gateway_{$gateway_id}_settings"
+                "upmkt_gateway_{$gateway_id}_settings",
+                [$this, 'validate_gateway_settings']
             );
         }
     }
 
     /**
-     * Adiciona aba de configurações
+     * Validação dinâmica 	baseada no gateway
      */
+    public function validate_gateway_settings(array $settings): array
+    {
+        $gateway_id = sanitize_text_field($_POST['gateway_id'] ?? '');
+
+        if (empty($gateway_id)) {
+            $option_page = sanitize_text_field($_POST['option_page'] ?? '');
+            if (strpos($option_page, 'upmkt_gateway_') === 0) {
+                $gateway_id = str_replace(['upmkt_gateway_', '_settings'], '', $option_page);
+            }
+        }
+
+        if (empty($gateway_id)) {
+            return $settings;
+        }
+
+        $gateway = $this->gateway_manager->get_gateway($gateway_id);
+
+        if ($gateway) {
+            $errors = $gateway->validate_settings($settings);
+
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    add_settings_error(
+                        "upmkt_gateway_{$gateway_id}_settings",
+                        "upmkt_gateway_{$gateway_id}_error",
+                        $error
+                    );
+                }
+            }
+        }
+
+        return $settings;
+    }
+
     public function add_settings_tab(): void
     {
+        if (self::$tabs_added) {
+            return;
+        }
+        self::$tabs_added = true;
         ?>
         <a href="#gateways" class="nav-tab">Gateways de Pagamento</a>
         <?php
     }
 
-    /**
-     * Renderiza conteúdo das configurações
-     */
     public function render_settings_content(): void
     {
         $gateways = $this->gateway_manager->get_gateways();
         ?>
-        <div id="gateways" class="tab-content">
-            <div class="upmkt-card">
-                <h2>Configurações dos Gateways de Pagamento</h2>
-                <p>Configure as integrações com os gateways de pagamento suportados.</p>
-            </div>
-            
-            <?php foreach ($gateways as $gateway_id => $gateway): ?>
-                <?php $this->render_gateway_settings($gateway); ?>
-            <?php endforeach; ?>
-            
-            <?php if (empty($gateways)): ?>
-                <div class="upmkt-card">
-                    <p>Nenhum gateway de pagamento registrado.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php
+				<div id="gateways" class="tab-content">
+						<?php foreach ($gateways as $gateway_id => $gateway): ?>
+								<?php $this->render_gateway_settings_form($gateway); ?>
+						<?php endforeach; ?>
+						
+						<?php if (empty($gateways)): ?>
+								<div class="upmkt-card">
+										<p>Nenhum gateway de pagamento registrado.</p>
+								</div>
+						<?php endif; ?>
+				</div>
+				<?php
     }
 
     /**
-     * Renderiza configurações de um gateway específico
+     * Renderiza formulário dinâmico baseado nos campos do gateway
      */
-    private function render_gateway_settings($gateway): void
+    private function render_gateway_settings_form($gateway): void
     {
         $gateway_id = $gateway->get_id();
         $gateway_name = $gateway->get_name();
-
-        // CADA GATEWAY BUSCA SEUS PRÓPRIOS DADOS
-        $gateway_settings = get_option("upmkt_gateway_{$gateway_id}_settings", []);
+        $settings = get_option("upmkt_gateway_{$gateway_id}_settings", []);
         $is_configured = $gateway->is_configured();
+        $is_enabled = ($settings['enabled'] ?? '') === 'yes';
+        $fields = $gateway->get_settings_fields();
+
+        static $first_gateway = true;
+        $is_open = $first_gateway;
+        $first_gateway = false;
         ?>
-        <div class="upmkt-card upmkt-gateway-settings" data-gateway="<?php echo esc_attr($gateway_id); ?>">
-            <h3>
-                <?php echo esc_html($gateway_name); ?>
-                <span class="upmkt-gateway-status <?php echo $is_configured ? 'status-active' : 'status-inactive'; ?>">
-                    <?php echo $is_configured ? '✓ Configurado' : '⚙️ Não Configurado'; ?>
-                </span>
-            </h3>
-            
-            <form method="post" action="options.php" class="upmkt-gateway-form">
-                <?php
-                // SETTINGS FIELDS INDIVIDUAL PARA CADA GATEWAY
-                settings_fields("upmkt_gateway_{$gateway_id}_settings");
+					<div class="upmkt-card upmkt-gateway-accordion" data-gateway="<?php echo esc_attr($gateway_id); ?>">
+							<div class="upmkt-accordion-header">
+									<h3 class="upmkt-accordion-title">
+											<button type="button" class="upmkt-accordion-toggle" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>">
+													<span class="upmkt-accordion-icon"><?php echo $is_open ? '−' : '+'; ?></span>
+													<?php echo esc_html($gateway_name); ?>
+													
+													<!-- Status de ativação do gateway -->
+													<span class="upmkt-gateway-status upmkt-gateway-enabled-status <?php echo $is_enabled ? 'status-enabled' : 'status-disabled'; ?>">
+															<?php echo $is_enabled ? '🟢 Ativo' : '🔴 Inativo'; ?>
+													</span>
+													
+													<!-- Status de configuração -->
+													<span class="upmkt-gateway-status <?php echo $is_configured ? 'status-active' : 'status-inactive'; ?>">
+															<?php echo $is_configured ? '✓ Configurado' : '⚙️ Não Configurado'; ?>
+													</span>
+											</button>
+									</h3>
+							</div>
+							
+							<div class="upmkt-accordion-content" <?php echo $is_open ? '' : 'style="display: none;"'; ?>>
+									<form method="post" action="options.php" class="upmkt-gateway-form">
+											<?php
+                                                    // CORREÇÃO: Processar settings_fields de forma limpa
+                                                    ob_start();
+        settings_fields("upmkt_gateway_{$gateway_id}_settings");
+        $settings_fields = ob_get_clean();
+
+        // CORREÇÃO: Remover todos os IDs problemáticos
+        $settings_fields = preg_replace('/\sid="[^"]*"/', '', $settings_fields);
+        $settings_fields = str_replace(
+            [
+                        'name="_wp_http_referer"',
+                        'value="' . esc_attr(wp_unslash($_SERVER['REQUEST_URI'])) . '"'
+                ],
+            [
+                        'name="' . esc_attr("{$gateway_id}_wp_http_referer") . '"',
+                        'value="' . esc_attr(wp_unslash($_SERVER['REQUEST_URI'])) . '"'
+                ],
+            $settings_fields
+        );
+
+        echo $settings_fields;
         ?>
+											<input type="hidden" name="gateway_id" value="<?php echo esc_attr($gateway_id); ?>">
+											
+											<table class="form-table">
+													<tbody>
+															<?php foreach ($fields as $field_key => $field_config): ?>
+																	<?php $this->render_settings_field($field_key, $field_config, $settings, $gateway_id); ?>
+															<?php endforeach; ?>
+													</tbody>
+											</table>
+											
+											<div class="upmkt-gateway-actions">
+													<?php
+                submit_button('Salvar Configurações', 'primary', "submit_{$gateway_id}", false, [
+                        'id' => ''
+                ]);
+        ?>
+													
+													<?php if ($is_configured && $is_enabled): ?>
+															<button type="button" 
+																			class="button button-secondary upmkt-test-connection" 
+																			data-gateway="<?php echo esc_attr($gateway_id); ?>">
+																	Testar Conexão
+															</button>
+													<?php endif; ?>
+											</div>
+											
+											<div class="upmkt-test-result" id="upmkt-test-result-<?php echo esc_attr($gateway_id); ?>" style="display: none;"></div>
+									</form>
+							</div>
+					</div>
+				<?php
+    }
+
+    /**
+     * Renderiza campo de configuração dinamicamente
+     */
+    private function render_settings_field(string $field_key, array $field_config, array $settings, string $gateway_id): void
+    {
+        $current_value = $settings[$field_key] ?? $field_config['default'] ?? '';
+        $field_name = "upmkt_gateway_{$gateway_id}_settings[{$field_key}]";
+        $required = isset($field_config['required']) && $field_config['required'] ? 'required' : '';
+
+        ?>
+        <tr>
+            <th scope="row"><?php echo esc_html($field_config['title'] ?? $field_key); ?></th>
+            <td>
+                <?php switch ($field_config['type'] ?? 'text'):
+                    case 'checkbox': ?>
+                        <label>
+                            <input type="checkbox" 
+                                   name="<?php echo esc_attr($field_name); ?>" 
+                                   value="yes" 
+                                   <?php checked($current_value, 'yes'); ?>
+                                   <?php echo $required; ?>>
+                            <?php echo esc_html($field_config['label'] ?? 'Ativar'); ?>
+                        </label>
+                        <?php break;
+
+                    case 'select': ?>
+                        <select name="<?php echo esc_attr($field_name); ?>" class="<?php echo esc_attr($field_config['class'] ?? ''); ?>" <?php echo $required; ?>>
+                            <?php foreach ($field_config['options'] ?? [] as $value => $label): ?>
+                                <option value="<?php echo esc_attr($value); ?>" <?php selected($current_value, $value); ?>>
+                                    <?php echo esc_html($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php break;
+
+                    case 'textarea': ?>
+                        <textarea name="<?php echo esc_attr($field_name); ?>" 
+                                  class="<?php echo esc_attr($field_config['class'] ?? 'large-text'); ?>" 
+                                  rows="<?php echo esc_attr($field_config['rows'] ?? 3); ?>"
+                                  <?php echo $required; ?>><?php echo esc_textarea($current_value); ?></textarea>
+                        <?php break;
+
+                    case 'password': ?>
+                        <input type="password" 
+                               name="<?php echo esc_attr($field_name); ?>" 
+                               value="<?php echo esc_attr($current_value); ?>" 
+                               class="<?php echo esc_attr($field_config['class'] ?? 'regular-text'); ?>"
+                               <?php echo $required; ?>>
+                        <?php break;
+
+                    case 'custom':
+                        if (isset($field_config['render_callback']) && is_callable($field_config['render_callback'])) {
+                            call_user_func($field_config['render_callback'], $settings);
+                        }
+                        break;
+
+                    default: ?>
+                        <input type="<?php echo esc_attr($field_config['type'] ?? 'text'); ?>" 
+                               name="<?php echo esc_attr($field_name); ?>" 
+                               value="<?php echo esc_attr($current_value); ?>" 
+                               class="<?php echo esc_attr($field_config['class'] ?? 'regular-text'); ?>"
+                               <?php echo $required; ?>>
+                <?php endswitch; ?>
                 
-                <table class="form-table">
-                    <tbody>
-                        <!-- Campo Enabled -->
-                        <tr>
-                            <th scope="row">Habilitar Gateway</th>
-                            <td>
-                                <label>
-                                    <input type="checkbox" 
-                                           name="upmkt_gateway_<?php echo esc_attr($gateway_id); ?>_settings[enabled]" 
-                                           value="yes" 
-                                           <?php checked($gateway_settings['enabled'] ?? '', 'yes'); ?>>
-                                    Ativar este gateway
-                                </label>
-                            </td>
-                        </tr>
-                        
-                        <!-- Campos específicos por gateway -->
-                        <?php $this->render_gateway_specific_fields($gateway_id, $gateway_settings); ?>
-                        
-                        <!-- Campo Título -->
-                        <tr>
-                            <th scope="row">Título</th>
-                            <td>
-                                <input type="text" 
-                                       name="upmkt_gateway_<?php echo esc_attr($gateway_id); ?>_settings[title]" 
-                                       value="<?php echo esc_attr($gateway_settings['title'] ?? $gateway_name); ?>" 
-                                       class="regular-text">
-                                <p class="description">Título que o cliente verá durante o checkout.</p>
-                            </td>
-                        </tr>
-                        
-                        <!-- Campo Descrição -->
-                        <tr>
-                            <th scope="row">Descrição</th>
-                            <td>
-                                <textarea name="upmkt_gateway_<?php echo esc_attr($gateway_id); ?>_settings[description]" 
-                                          class="large-text" 
-                                          rows="3"><?php echo esc_textarea($gateway_settings['description'] ?? ''); ?></textarea>
-                                <p class="description">Descrição que o cliente verá durante o checkout.</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <div class="upmkt-gateway-actions">
-                    <?php submit_button('Salvar Configurações', 'primary', "submit_{$gateway_id}"); ?>
-                    
-                    <?php if ($is_configured): ?>
-                        <button type="button" 
-                                class="button button-secondary upmkt-test-connection" 
-                                data-gateway="<?php echo esc_attr($gateway_id); ?>">
-                            Testar Conexão
-                        </button>
-                    <?php endif; ?>
-                </div>
-                
-                <div class="upmkt-test-result" id="upmkt-test-result-<?php echo esc_attr($gateway_id); ?>" style="display: none;"></div>
-            </form>
-        </div>
+                <?php if (!empty($field_config['description'])): ?>
+                    <p class="description"><?php echo esc_html($field_config['description']); ?></p>
+                <?php endif; ?>
+            </td>
+        </tr>
         <?php
     }
 
     /**
-     * Renderiza campos específicos de cada gateway
-     */
-    private function render_gateway_specific_fields(string $gateway_id, array $settings): void
-    {
-        switch ($gateway_id) {
-            case 'rede':
-                $this->render_rede_fields($settings);
-                break;
-
-                // Adicione outros gateways aqui no futuro
-            default:
-                do_action("upmkt_render_gateway_fields_{$gateway_id}", $settings);
-                break;
-        }
-    }
-
-    /**
-     * Renderiza campos específicos da Rede
-     */
-    private function render_rede_fields(array $settings): void
-    {
-        ?>
-        <tr>
-            <th scope="row">Ambiente</th>
-            <td>
-                <select name="upmkt_gateway_rede_settings[environment]">
-                    <option value="sandbox" <?php selected($settings['environment'] ?? '', 'sandbox'); ?>>Sandbox (Testes)</option>
-                    <option value="production" <?php selected($settings['environment'] ?? '', 'production'); ?>>Produção</option>
-                </select>
-                <p class="description">Use Sandbox para testes e Produção para ambiente real.</p>
-            </td>
-        </tr>
-        
-        <tr>
-            <th scope="row">PV (Affiliation)</th>
-            <td>
-                <input type="text" 
-                       name="upmkt_gateway_rede_settings[pv]" 
-                       value="<?php echo esc_attr($settings['pv'] ?? ''); ?>" 
-                       class="regular-text">
-                <p class="description">Número do PV (affiliation) fornecido pela Rede.</p>
-            </td>
-        </tr>
-        
-        <tr>
-            <th scope="row">Token</th>
-            <td>
-                <input type="password" 
-                       name="upmkt_gateway_rede_settings[token]" 
-                       value="<?php echo esc_attr($settings['token'] ?? ''); ?>" 
-                       class="regular-text">
-                <p class="description">Token de autenticação fornecido pela Rede.</p>
-            </td>
-        </tr>
-        
-        <tr>
-            <th scope="row">URL do Webhook</th>
-            <td>
-                <code><?php echo esc_url(home_url('/upmkt-webhook/rede/')); ?></code>
-                <p class="description">Configure este URL no painel da Rede para receber notificações.</p>
-            </td>
-        </tr>
-        <?php
-    }
-
-    /**
-     * Testa conexão com gateway via AJAX
+     * Teste de conexão via AJAX
      */
     public function test_gateway_connection(): void
     {
@@ -252,25 +280,17 @@ class GatewaySettings
 
         if (!current_user_can('manage_upmkt_subscriptions')) {
             wp_send_json_error(['message' => 'Sem permissão.']);
-            return;
         }
 
         $gateway_id = sanitize_text_field($_POST['gateway_id'] ?? '');
+        $gateway = $this->gateway_manager->get_gateway($gateway_id);
 
-        if (empty($gateway_id)) {
-            wp_send_json_error(['message' => 'Gateway não especificado.']);
-            return;
+        if (!$gateway) {
+            wp_send_json_error(['message' => 'Gateway não encontrado.']);
         }
 
         try {
-            $gateway = $this->gateway_manager->get_gateway($gateway_id);
-
-            if (!$gateway) {
-                wp_send_json_error(['message' => 'Gateway não encontrado.']);
-                return;
-            }
-
-            $result = $this->perform_gateway_test($gateway);
+            $result = $gateway->test_connection();
 
             if ($result['success']) {
                 wp_send_json_success(['message' => $result['message']]);
@@ -281,47 +301,6 @@ class GatewaySettings
         } catch (\Exception $e) {
             Logger::instance()->error("Gateway connection test failed: " . $e->getMessage(), 'admin');
             wp_send_json_error(['message' => 'Erro: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Executa teste específico para cada gateway
-     */
-    private function perform_gateway_test($gateway): array
-    {
-        $gateway_id = $gateway->get_id();
-
-        switch ($gateway_id) {
-            case 'rede':
-                return $this->test_rede_connection($gateway);
-
-            default:
-                return [
-                    'success' => false,
-                    'message' => 'Teste não implementado para este gateway.'
-                ];
-        }
-    }
-
-    /**
-     * Testa conexão com a Rede
-     */
-    private function test_rede_connection($gateway): array
-    {
-        try {
-            $test_transaction_id = 'test_connection';
-            $status_result = $gateway->check_payment_status($test_transaction_id);
-
-            return [
-                'success' => true,
-                'message' => 'Conexão com a API da Rede estabelecida com sucesso!'
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Falha na conexão: ' . $e->getMessage()
-            ];
         }
     }
 }

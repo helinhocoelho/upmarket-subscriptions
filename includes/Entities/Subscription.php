@@ -207,4 +207,53 @@ class Subscription extends AbstractSubscription
 
         return null;
     }
+
+    /**
+     * Verifica se a assinatura existe
+     */
+    public function exists(): bool
+    {
+        return $this->id > 0 && !empty($this->status);
+    }
+
+    /**
+     * Define o ID do plano
+     */
+    public function set_plan_id(int $plan_id): void
+    {
+        $this->plan_id = $plan_id;
+    }
+
+    /**
+     * Define a data de início
+     */
+    public function set_start_date(\DateTime $date): void
+    {
+        $this->start_date = $date;
+    }
+
+    /**
+     * Define a próxima data de cobrança
+     */
+    public function set_next_billing_date(\DateTime $date): void
+    {
+        $this->next_billing_date = $date;
+    }
+
+    /**
+     * Obtém metadado
+     */
+    public function get_meta(string $key, $default = null)
+    {
+        return $this->meta[$key] ?? $default;
+    }
+
+    /**
+     * Define metadado
+     */
+    public function set_meta(string $key, $value): void
+    {
+        $this->meta[$key] = $value;
+    }
+
 }

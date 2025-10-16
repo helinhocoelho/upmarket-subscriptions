@@ -18,7 +18,6 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     public const STATUS_PENDING = 'pending';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_EXPIRED = 'expired';
-    public const STATUS_PAUSED = 'paused';
 
     /**
      * @var int ID do usuário
@@ -99,8 +98,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
             self::STATUS_ACTIVE,
             self::STATUS_PENDING,
             self::STATUS_CANCELLED,
-            self::STATUS_EXPIRED,
-            self::STATUS_PAUSED
+            self::STATUS_EXPIRED
         ];
 
         if (!in_array($status, $allowed_statuses)) {
@@ -149,16 +147,6 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     public function cancel(): bool
     {
         return $this->set_status(self::STATUS_CANCELLED);
-    }
-
-    /**
-     * Pausa a assinatura
-     *
-     * @return bool
-     */
-    public function pause(): bool
-    {
-        return $this->set_status(self::STATUS_PAUSED);
     }
 
     /**

@@ -59,3 +59,11 @@ add_action('plugins_loaded', function () {
 // Registra ativação e desativação
 register_activation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Activator', 'activate']);
 register_deactivation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Deactivator', 'deactivate']);
+
+
+// Iniciação após carregar todas as classes
+add_action('plugins_loaded', function () {
+    if (is_admin()) {
+        \UPMarket\Subscriptions\Admin\AdminInit::init();
+    }
+});

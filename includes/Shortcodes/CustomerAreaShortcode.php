@@ -241,8 +241,7 @@ class CustomerAreaShortcode
             'active' => 'Ativa',
             'pending' => 'Pendente',
             'cancelled' => 'Cancelada',
-            'expired' => 'Expirada',
-            'paused' => 'Pausada'
+            'expired' => 'Expirada'
         ];
 
         return $statuses[$status] ?? $status;

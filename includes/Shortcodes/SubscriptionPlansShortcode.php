@@ -44,92 +44,11 @@ class SubscriptionPlansShortcode
 
             ob_start();
             ?>
-            <div class="upmkt-plans upmkt-plans-<?php echo esc_attr($atts['layout']); ?> <?php echo esc_attr($atts['class']); ?>">
-                <?php foreach ($plans as $plan): ?>
-                    <div class="upmkt-plan-item">
-                        <?php $this->render_plan_card($plan, $atts); ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <style>
-                .upmkt-plans-grid {
-                    display: grid;
-                    grid-template-columns: repeat(<?php echo esc_attr($atts['columns']); ?>, 1fr);
-                    gap: 20px;
-                    margin: 20px 0;
-                }
-                
-                .upmkt-plan-card {
-                    border: 1px solid #ddd;
-                    border-radius: 8px;
-                    padding: 20px;
-                    text-align: center;
-                    transition: all 0.3s ease;
-                }
-                
-                .upmkt-plan-card:hover {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                    transform: translateY(-2px);
-                }
-                
-                .upmkt-plan-name {
-                    font-size: 1.5em;
-                    font-weight: bold;
-                    margin-bottom: 10px;
-                    color: #333;
-                }
-                
-                .upmkt-plan-price {
-                    font-size: 2em;
-                    font-weight: bold;
-                    color: #007cba;
-                    margin-bottom: 10px;
-                }
-                
-                .upmkt-plan-period {
-                    font-size: 0.9em;
-                    color: #666;
-                }
-                
-                .upmkt-plan-features {
-                    list-style: none;
-                    padding: 0;
-                    margin: 20px 0;
-                    text-align: left;
-                }
-                
-                .upmkt-plan-features li {
-                    padding: 5px 0;
-                    border-bottom: 1px solid #f0f0f0;
-                }
-                
-                .upmkt-plan-features li:last-child {
-                    border-bottom: none;
-                }
-                
-                .upmkt-plan-button {
-                    display: inline-block;
-                    background: #007cba;
-                    color: white;
-                    padding: 12px 24px;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    transition: background 0.3s ease;
-                }
-                
-                .upmkt-plan-button:hover {
-                    background: #005a87;
-                    color: white;
-                }
-                
-                .upmkt-plan-trial {
-                    font-size: 0.9em;
-                    color: #28a745;
-                    margin-top: 10px;
-                }
-            </style>
+							<div class="upmkt-plans upmkt-plans-grid">
+									<?php foreach ($plans as $plan): ?>
+											<?php $this->render_plan_card($plan, $atts); ?>
+									<?php endforeach; ?>
+							</div>
             <?php
             return ob_get_clean();
 
@@ -147,41 +66,103 @@ class SubscriptionPlansShortcode
      */
     private function render_plan_card(SubscriptionPlan $plan, array $atts): void
     {
+        // Dados principais do plano
+        $name        = esc_html($plan->get_name());
+        $price       = esc_html($plan->get_formatted_price());
+        $description = esc_html($plan->get_description());
+        //$icon        = esc_attr($plan->get_icon_class() ?: 'fa-medal');
+        $features    = $plan->get_features() ?: [];
+        $checkout_url = esc_url($this->get_checkout_url($plan->get_id()));
+
         ?>
-        <div class="upmkt-plan-card">
-            <div class="upmkt-plan-name">
-                <?php echo esc_html($plan->get_name()); ?>
+    <div class="fusion-layout-column fusion_builder_column_inner fusion-flex-column" style="
+        --awb-bg-blend: overlay;
+        --awb-bg-size: cover;
+        --awb-width-large: 25%;
+        --awb-margin-top-large: 0px;
+        --awb-spacing-right-large: 7.68%;
+        --awb-margin-bottom-large: 50px;
+        --awb-spacing-left-large: 7.68%;
+        --awb-width-medium: 33.3333333333%;
+        --awb-spacing-right-medium: 5.76%;
+        --awb-spacing-left-medium: 5.76%;
+        --awb-width-small: 100%;
+        --awb-spacing-right-small: 1.92%;
+        --awb-spacing-left-small: 1.92%;
+    ">
+        <div class="fusion-column-wrapper fusion-flex-justify-content-flex-start fusion-content-layout-column">
+            <div class="fusion-content-boxes content-boxes columns row fusion-columns-1 content-boxes-icon-on-top content-left"
+                style="--awb-hover-accent-color: var(--awb-color5); --awb-circle-hover-accent-color: transparent; --awb-item-margin-bottom: 40px;">
+                <div style="--awb-backgroundcolor: rgba(255, 255, 255, 0);" 
+                    class="fusion-column content-box-column col-lg-12 fusion-content-box-hover">
+                    <div class="col content-box-wrapper content-wrapper link-area-link-icon link-type-text icon-hover-animation-slide">
+                        <div class="heading heading-with-icon icon-left">
+                            <a class="heading-link" href="<?php echo $checkout_url; ?>" target="_blank" rel="noopener noreferrer">
+                                <div class="icon">
+                                    <i class="fontawesome-icon fas fa-envelope <?php //echo $icon;?> circle-yes"
+                                        style="
+                                            border-color: var(--awb-color5);
+                                            border-width: 1px;
+                                            background-color: rgba(51, 51, 51, 0);
+                                            box-sizing: content-box;
+                                            height: 100px;
+                                            width: 100px;
+                                            line-height: 100px;
+                                            border-radius: 50%;
+                                            font-size: 50px;
+                                        ">
+                                    </i>
+                                </div>
+                                <h2 class="content-box-heading fusion-responsive-typography-calculated"
+                                    style="--h2_typography-font-size: 20px; line-height: var(--awb-typography1-line-height);">
+                                    <?php echo $name; ?>
+                                </h2>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="upmkt-plan-price">
-                <?php echo esc_html($plan->get_formatted_price()); ?>
-            </div>
-            
-            <div class="upmkt-plan-period">
-                por <?php echo esc_html($plan->get_formatted_period()); ?>
-            </div>
-            
-            <?php if ($atts['show_trial'] === 'yes' && $plan->has_trial()): ?>
-                <div class="upmkt-plan-trial">
-                    <?php echo esc_html($plan->get_trial_period_days()); ?> dias grátis
+
+            <i class="fb-icon-element fontawesome-icon creative-angle-down circle-no fusion-animated"
+                style="--awb-font-size: 30px; --awb-align-self: center; animation-duration: 0.5s;"
+                data-animationtype="fadeInDown"></i>
+
+            <div class="fusion-separator fusion-full-width-sep" style="margin: 20px 0; width: 100%;"></div>
+
+            <?php if (!empty($description)) : ?>
+                <div class="fusion-text min-h-105" style="--awb-font-size: 0.7em;">
+                    <p style="text-align: center;"><?php echo $description; ?></p>
                 </div>
             <?php endif; ?>
-            
-            <?php $features = $plan->get_features(); ?>
-            <?php if (!empty($features)): ?>
-                <ul class="upmkt-plan-features">
-                    <?php foreach ($features as $feature): ?>
-                        <li>✓ <?php echo esc_html($feature); ?></li>
-                    <?php endforeach; ?>
-                </ul>
+
+            <?php if (!empty($features)) : ?>
+                <div class="fusion-separator" style="margin: 20px auto; width: 100%; max-width: 60%;">
+                    <div class="fusion-separator-border sep-single sep-solid"
+                        style="--awb-height: 20px; border-color: var(--awb-color4); border-top-width: 1px;">
+                    </div>
+                </div>
+                <div class="fusion-text min-h-85" style="--awb-font-size: 0.7em;">
+                    <ul style="list-style: none; padding: 0; text-align: center;">
+                        <?php foreach ($features as $feature): ?>
+                            <li style="margin-bottom: 5px;"><?php echo esc_html($feature); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
             <?php endif; ?>
-            
-            <a href="<?php echo esc_url($this->get_checkout_url($plan->get_id())); ?>" class="upmkt-plan-button">
-                Assinar Agora
-            </a>
+
+            <div style="text-align: center;">
+                <a class="fusion-button button-flat fusion-button-default-size button-default mb-60"
+                    href="<?php echo $checkout_url; ?>"
+                    target="_blank" rel="noopener noreferrer"
+                    style="--button_text_transform: none;">
+                    <span class="fusion-button-text"><?php echo $price; ?></span>
+                </a>
+            </div>
         </div>
-        <?php
+    </div>
+    <?php
     }
+
 
     /**
      * Retorna URL do checkout para o plano

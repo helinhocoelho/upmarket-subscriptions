@@ -94,7 +94,9 @@ class Plugin
     private function init_hooks(): void
     {
         add_action('init', [$this, 'init_plugin']);
-        add_action('wp_loaded', [$this, 'load_webhooks']);
+
+        // ❌ CORREÇÃO: REMOVIDO - Webhooks agora são tratados dinamicamente no GatewayManager
+        // add_action('wp_loaded', [$this, 'load_webhooks']);
     }
 
     /**
@@ -103,20 +105,21 @@ class Plugin
     public function init_plugin(): void
     {
         $this->load_textdomain();
+
         do_action('upmkt_plugin_loaded');
     }
 
     /**
-     * Carrega webhooks
+     * ❌ CORREÇÃO: MÉTODO REMOVIDO - Webhooks agora são dinâmicos
+     * public function load_webhooks(): void
+     * {
+     *     if (isset($_GET['upmkt_webhook'])) {
+     *         $gateway_id = sanitize_text_field($_GET['upmkt_webhook']);
+     *         $this->container->gateway_manager->process_webhook($gateway_id);
+     *         exit;
+     *     }
+     * }
      */
-    public function load_webhooks(): void
-    {
-        if (isset($_GET['upmkt_webhook'])) {
-            $gateway_id = sanitize_text_field($_GET['upmkt_webhook']);
-            $this->container->gateway_manager->process_webhook($gateway_id);
-            exit;
-        }
-    }
 
     /**
      * Carrega traduções

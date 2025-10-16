@@ -78,4 +78,19 @@ interface PaymentGatewayInterface
      * @return string
      */
     public function get_id(): string;
+
+    /**
+     * Retorna os campos de configuração do gateway
+     */
+    public function get_settings_fields(): array;
+
+    /**
+     * Valida as configurações do gateway
+     */
+    public function validate_settings(array $settings): array;
+
+    /**
+     * Testa a conexão com o gateway
+     */
+    public function test_connection(): array;
 }

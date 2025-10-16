@@ -63,15 +63,54 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
     }
 
     /**
+     * CORREÇÃO: Método atualizado para receber dados dinamicamente
      * Processa webhooks do gateway
      *
+     * @param array $webhook_data Dados do webhook
      * @return void
      */
-    public function process_webhook(): void
+    public function process_webhook(array $webhook_data = []): void
     {
-        // Implementação base para webhooks
-        $payload = file_get_contents('php://input');
-        $this->log('Webhook received: ' . $payload);
+        // Implementação base melhorada
+        $payload = $webhook_data['body'] ?? file_get_contents('php://input');
+        $headers = $webhook_data['headers'] ?? [];
+
+        $this->log("Webhook received for gateway {$this->id}");
+        $this->log("Headers: " . json_encode($headers));
+        $this->log("Payload: " . $payload);
+
+        // Dispara ação específica do gateway para extensibilidade
+        do_action("upmkt_{$this->id}_webhook_received", $webhook_data);
+    }
+
+    /**
+     * NOVO: Valida assinatura do webhook
+     *
+     * @param array $webhook_data
+     * @return bool
+     */
+    protected function validate_webhook_signature(array $webhook_data): bool
+    {
+        // Implementação base - gateways específicos devem sobrescrever
+        $this->log("Webhook signature validation not implemented for {$this->id}");
+        return true;
+    }
+
+    /**
+     * NOVO: Processa eventos de webhook de forma estruturada
+     *
+     * @param string $event_type
+     * @param array $event_data
+     * @return void
+     */
+    protected function handle_webhook_event(string $event_type, array $event_data): void
+    {
+        $action_hook = "upmkt_{$this->id}_{$event_type}";
+
+        $this->log("Dispatching webhook event: {$action_hook}");
+
+        // Dispara hook dinâmico para outros handlers processarem
+        do_action($action_hook, $event_data, $this->id);
     }
 
     /**
@@ -153,5 +192,86 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
     public function is_configured(): bool
     {
         return $this->enabled && !empty($this->settings);
+    }
+
+    /**
+     * Retorna campos de configuração padrão
+     */
+    public function get_settings_fields(): array
+    {
+        return [
+            'enabled' => [
+                'title' => 'Habilitar Gateway',
+                'type' => 'checkbox',
+                'label' => 'Ativar este gateway',
+                'default' => 'no',
+                'description' => 'Habilita este gateway de pagamento'
+            ],
+            'title' => [
+                'title' => 'Título',
+                'type' => 'text',
+                'default' => $this->name,
+                'description' => 'Título que o cliente verá durante o checkout.',
+                'class' => 'regular-text'
+            ],
+            'description' => [
+                'title' => 'Descrição',
+                'type' => 'textarea',
+                'default' => '',
+                'description' => 'Descrição que o cliente verá durante o checkout.',
+                'rows' => 3,
+                'class' => 'large-text'
+            ],
+            // NOVO: Campo para webhook URL (automático)
+            'webhook_url' => [
+                'title' => 'URL de Webhook',
+                'type' => 'custom',
+                'render_callback' => function ($settings) {
+                    $webhook_url = $this->get_webhook_url();
+                    echo "<div class='upmkt-webhook-url-container'>";
+                    echo "<input type='text' class='large-text' value='{$webhook_url}' readonly>";
+                    echo "<p class='description'>Configure esta URL no painel do gateway para receber notificações automáticas.</p>";
+                    echo "</div>";
+                }
+            ]
+        ];
+    }
+
+    /**
+     * NOVO: Retorna URL de webhook para este gateway
+     *
+     * @return string
+     */
+    public function get_webhook_url(): string
+    {
+        return home_url("/webhook-{$this->id}/");
+    }
+
+    /**
+     * Validação básica das configurações
+     */
+    public function validate_settings(array $settings): array
+    {
+        $errors = [];
+
+        if (!empty($settings['enabled']) && $settings['enabled'] === 'yes') {
+            // Validação básica - gateways específicos podem sobrescrever
+            if (!$this->is_configured()) {
+                $errors[] = 'Gateway não está completamente configurado.';
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Teste de conexão básico
+     */
+    public function test_connection(): array
+    {
+        return [
+            'success' => false,
+            'message' => 'Teste de conexão não implementado para este gateway.'
+        ];
     }
 }

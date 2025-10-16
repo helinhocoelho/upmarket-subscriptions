@@ -85,34 +85,6 @@ Configure na Rede o webhook:
 https://seusite.com/upmkt-webhook/rede/
 ```
 
-### 3. Testes
-
-Use o ambiente Sandbox para testes:
-
-- Cartão de teste: `4111 1111 1111 1111`
-- CVV: `123`
-- Validade: data futura
-
-## 🔧 API para Desenvolvedores
-
-### Criar Assinatura Programaticamente
-
-```php
-$subscription_manager = new UPMarket\Subscriptions\Services\SubscriptionManager();
-
-$result = $subscription_manager->create_subscription(
-    $user_id,
-    $plan_id,
-    [
-        'payment_method' => 'rede',
-        'card_number' => '4111111111111111',
-        'card_expiry' => '12/25',
-        'card_cvv' => '123',
-        'card_holder' => 'Nome do Cliente'
-    ]
-);
-```
-
 ### Gerenciar Assinatura
 
 ```php
@@ -156,7 +128,6 @@ $subscription->resume();
 2. **Pagamento recusado**
 
    - Teste com cartão de teste no Sandbox
-   - Verifique logs em `Assinaturas > Testes`
 
 3. **Webhook não funciona**
    - Confirme URL configurada na Rede
@@ -165,7 +136,6 @@ $subscription->resume();
 ### Logs e Debug
 
 - Logs são salvos em `wp-content/upmkt-debug.log`
-- Use `Assinaturas > Testes` para diagnóstico
 - Habilite `WP_DEBUG` para mais detalhes
 
 ## 📞 Suporte

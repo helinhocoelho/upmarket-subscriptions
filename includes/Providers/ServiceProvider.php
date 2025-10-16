@@ -29,14 +29,9 @@ class ServiceProvider
             return new NotificationService();
         });
 
-        $container->singleton('cron_handlers', function () {
-            return new CronHandlers();
+        $container->singleton('cron_handlers', function ($container) {
+            return new CronHandlers($container->subscription_manager);
         });
-
-        $container->singleton('webhook_handlers', function () {
-            return new WebhookHandlers();
-        });
-
 
         do_action('upmkt_register_services', $container);
     }

@@ -1,4 +1,4 @@
-/* UP Market Subscriptions - Admin Styles */
+/* UP Market Subscriptions - Admin Styles - ATUALIZADO */
 
 .upmkt-admin {
   max-width: 1200px;
@@ -135,6 +135,257 @@
   margin: 20px 0;
 }
 
+/* Gateways */
+.upmkt-gateway-accordion {
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.upmkt-gateway-accordion.upmkt-accordion-active {
+  border-color: #0073aa;
+}
+
+.upmkt-accordion-header {
+  border-bottom: 1px solid #ccd0d4;
+  background: #f8f9fa;
+}
+
+.upmkt-accordion-active .upmkt-accordion-header {
+  background: #f0f7fc;
+  border-bottom-color: #0073aa;
+}
+
+.upmkt-accordion-title {
+  margin: 0;
+  padding: 0;
+}
+
+.upmkt-accordion-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 15px 20px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.upmkt-accordion-toggle:hover {
+  background: #e9ecef;
+}
+
+.upmkt-accordion-active .upmkt-accordion-toggle:hover {
+  background: #e1f0fa;
+}
+
+.upmkt-accordion-toggle:focus {
+  outline: 2px solid #2271b1;
+  outline-offset: -2px;
+}
+
+.upmkt-accordion-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #2271b1;
+  color: white;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.upmkt-accordion-active .upmkt-accordion-icon {
+  background: #0073aa;
+}
+
+.upmkt-accordion-content {
+  padding: 20px;
+  display: none;
+}
+
+/* Status de ativação */
+.upmkt-gateway-enabled-status {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: normal;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.upmkt-gateway-enabled-status.status-enabled {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.upmkt-gateway-enabled-status.status-disabled {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Estilos existentes para status de configuração */
+.upmkt-gateway-status:not(.upmkt-gateway-enabled-status) {
+  font-size: 12px;
+  font-weight: normal;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.upmkt-gateway-status.status-active {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.upmkt-gateway-status.status-inactive {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.upmkt-test-result.success {
+  background: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 15px;
+  border: 1px solid #c3e6cb;
+}
+
+.upmkt-test-result.error {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 15px;
+  border: 1px solid #f5c6cb;
+}
+
+/* Gráficos */
+.upmkt-chart-container {
+  margin: 15px 0;
+}
+
+.upmkt-chart-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 5px 0;
+}
+
+.upmkt-chart-label {
+  width: 120px;
+  font-weight: 500;
+}
+
+.upmkt-chart-bar {
+  flex: 1;
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  margin: 0 10px;
+  overflow: hidden;
+}
+
+.upmkt-chart-fill {
+  height: 100%;
+  background: #0073aa;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.upmkt-chart-count {
+  width: 80px;
+  text-align: right;
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* Subscriptions Edit */
+.upmkt-edit-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.upmkt-edit-sidebar .upmkt-card {
+  margin-bottom: 20px;
+}
+
+.upmkt-danger-actions {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.upmkt-danger-actions .button {
+  margin-right: 10px;
+  margin-bottom: 5px;
+}
+
+.upmkt-activity-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.upmkt-activity-item:last-child {
+  border-bottom: none;
+}
+
+.upmkt-activity-date {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.upmkt-status {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.upmkt-status-active {
+  background: #d4edda;
+  color: #155724;
+}
+.upmkt-status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+.upmkt-status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+.upmkt-status-expired {
+  background: #e2e3e5;
+  color: #383d41;
+}
+.upmkt-status-paused {
+  background: #cce7ff;
+  color: #004085;
+}
+
+.upmkt-billing-soon {
+  color: #d63638;
+  font-weight: bold;
+}
+.upmkt-billing-upcoming {
+  color: #dba617;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .upmkt-dashboard-content {
@@ -149,5 +400,15 @@
 @media (max-width: 480px) {
   .upmkt-dashboard-stats {
     grid-template-columns: 1fr;
+  }
+
+  .upmkt-accordion-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .upmkt-gateway-enabled-status {
+    margin-left: 0;
   }
 }

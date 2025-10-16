@@ -74,13 +74,6 @@ interface SubscriptionInterface
     public function cancel(): bool;
 
     /**
-     * Pausa a assinatura
-     *
-     * @return bool
-     */
-    public function pause(): bool;
-
-    /**
      * Retoma a assinatura
      *
      * @return bool
