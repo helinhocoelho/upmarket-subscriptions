@@ -185,4 +185,5 @@ class SubscriptionPlansShortcode
             'plan_id' => $plan_id
         ], get_permalink());
     }
+
 }

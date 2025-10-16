@@ -705,142 +705,148 @@ class AdminMenu
             wp_die('Você não tem permissão para acessar esta página.');
         }
 
+        // Processar salvamento das configurações
+        if (isset($_POST['submit_upmkt_settings']) && isset($_POST['upmkt_settings_nonce'])) {
+            $this->handle_settings_save();
+        }
+
         $active_tab = $_GET['tab'] ?? 'general';
+        $current_checkout_page_id = get_option('upmkt_checkout_page_id');
         ?>
-    <div class="wrap upmkt-admin">
-        <h1>Configurações - Assinaturas</h1>
-        
-        <nav class="nav-tab-wrapper">
-            <a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
-                Geral
-            </a>
-            <?php do_action('upmkt_admin_settings_tabs'); ?>
-        </nav>
-        
-        <div class="upmkt-settings-content">
-            <?php if ($active_tab === 'general'): ?>
-                <div id="general" class="tab-content active">
-                    <div class="upmkt-card">
-                        <h2>Configurações Gerais</h2>
-                        <p>Configurações gerais do sistema de assinaturas.</p>
-                        <!-- Adicione campos gerais aqui no futuro -->
-                    </div>
-                </div>
-            <?php endif; ?>
-            
-            <?php do_action('upmkt_admin_settings_content'); ?>
-        </div>
-    </div>
-    
-    <style>
-    .nav-tab-wrapper {
-        margin-bottom: 20px;
+					<div class="wrap upmkt-admin">
+							<h1>Configurações - Assinaturas</h1>
+							
+							<nav class="nav-tab-wrapper">
+									<a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
+											Geral
+									</a>
+									<?php do_action('upmkt_admin_settings_tabs'); ?>
+							</nav>
+							
+							<div class="upmkt-settings-content">
+									<?php if ($active_tab === 'general'): ?>
+											<div id="general" class="tab-content active">
+													<div class="upmkt-card">
+															<h2>Configurações Gerais</h2>
+															
+															<form method="post">
+																	<?php wp_nonce_field('upmkt_save_settings', 'upmkt_settings_nonce'); ?>
+																	
+																	<table class="form-table">
+																			<tbody>
+																					<tr>
+																							<th scope="row">
+																									<label for="upmkt_checkout_page_id">Página de Checkout</label>
+																							</th>
+																							<td>
+																									<select name="upmkt_checkout_page_id" id="upmkt_checkout_page_id" style="min-width: 300px;">
+																											<option value="">-- Selecione uma página --</option>
+																											<?php
+                                                                                                                    $pages = get_pages();
+									    foreach ($pages as $page) {
+									        $selected = selected($current_checkout_page_id, $page->ID, false);
+									        echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
+									        echo esc_html($page->post_title) . ' (ID: ' . $page->ID . ')';
+									        echo '</option>';
+									    }
+									    ?>
+																									</select>
+																									<p class="description">
+																											Selecione a página onde o shortcode <code>[upmkt_checkout]</code> foi inserido.
+																											<?php if ($current_checkout_page_id && get_post_status($current_checkout_page_id) === 'publish'): ?>
+																											<?php endif; ?>
+																									</p>
+																							</td>
+																					</tr>
+																			</tbody>
+																	</table>
+																	
+																	<p class="submit">
+																			<input type="submit" name="submit_upmkt_settings" class="button button-primary" value="Salvar Configurações">
+																	</p>
+															</form>
+													</div>
+											</div>
+									<?php endif; ?>
+									
+									<?php do_action('upmkt_admin_settings_content'); ?>
+							</div>
+					</div>
+					
+					<style>
+					.nav-tab-wrapper {
+							margin-bottom: 20px;
+					}
+					
+					.tab-content {
+							display: none;
+					}
+					
+					.tab-content.active {
+							display: block;
+					}
+					
+					.upmkt-settings-content .form-table {
+							margin-top: 0;
+					}
+					
+					.upmkt-settings-content .form-table th {
+							width: 200px;
+					}
+					
+					#upmkt_checkout_page_id {
+							min-width: 300px;
+					}
+					</style>
+					
+					<script>
+					jQuery(document).ready(function($) {
+							// Tab navigation
+							$('.nav-tab').on('click', function(e) {
+									e.preventDefault();
+									var target = $(this).attr('href');
+									
+									$('.nav-tab').removeClass('nav-tab-active');
+									$('.tab-content').removeClass('active');
+									
+									$(this).addClass('nav-tab-active');
+									$(target).addClass('active');
+							});
+					});
+					</script>
+				<?php
     }
-    
-    .tab-content {
-        display: none;
-    }
-    
-    .tab-content.active {
-        display: block;
-    }
-    
-    .upmkt-gateway-settings {
-        margin-bottom: 20px;
-    }
-    
-    .upmkt-gateway-status {
-        float: right;
-        font-size: 0.8em;
-        padding: 4px 8px;
-        border-radius: 3px;
-        font-weight: normal;
-    }
-    
-    .status-active {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-inactive {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
-    .upmkt-gateway-actions {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #ddd;
-    }
-    
-    .upmkt-test-result {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 4px;
-    }
-    
-    .upmkt-test-result.success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .upmkt-test-result.error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    </style>
-    
-    <script>
-    jQuery(document).ready(function($) {
-        // Tab navigation
-        $('.nav-tab').on('click', function(e) {
-            e.preventDefault();
-            var target = $(this).attr('href');
-            
-            $('.nav-tab').removeClass('nav-tab-active');
-            $('.tab-content').removeClass('active');
-            
-            $(this).addClass('nav-tab-active');
-            $(target).addClass('active');
-        });
-        
-        // Test connection buttons
-        $('.upmkt-test-connection').on('click', function() {
-            var $button = $(this);
-            var gatewayId = $button.data('gateway');
-            var $result = $('#upmkt-test-result-' + gatewayId);
-            
-            $button.prop('disabled', true).text('Testando...');
-            $result.hide().removeClass('success error');
-            
-            $.ajax({
-                url: upmkt_admin.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'upmkt_test_gateway_connection',
-                    gateway_id: gatewayId,
-                    nonce: upmkt_admin.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $result.html(response.data.message).addClass('success').show();
-                    } else {
-                        $result.html(response.data.message).addClass('error').show();
-                    }
-                },
-                error: function() {
-                    $result.html('Erro de conexão.').addClass('error').show();
-                },
-                complete: function() {
-                    $button.prop('disabled', false).text('Testar Conexão');
-                }
-            });
-        });
-    });
-    </script>
-    <?php
+
+    /**
+     * Manipula o salvamento das configurações
+     */
+    private function handle_settings_save(): void
+    {
+        if (!wp_verify_nonce($_POST['upmkt_settings_nonce'], 'upmkt_save_settings')) {
+            $this->add_admin_notice('Erro de segurança. Nonce inválido.', 'error');
+            return;
+        }
+
+        if (!current_user_can('manage_upmkt_subscriptions')) {
+            $this->add_admin_notice('Sem permissão para salvar configurações.', 'error');
+            return;
+        }
+
+        try {
+            // Salvar página de checkout
+            $checkout_page_id = intval($_POST['upmkt_checkout_page_id'] ?? 0);
+
+            if ($checkout_page_id > 0) {
+                update_option('upmkt_checkout_page_id', $checkout_page_id);
+                $this->add_admin_notice('Configurações salvas com sucesso!', 'success');
+            } else {
+                delete_option('upmkt_checkout_page_id');
+                $this->add_admin_notice('Página de checkout removida.', 'success');
+            }
+
+        } catch (\Exception $e) {
+            $this->add_admin_notice('Erro ao salvar configurações: ' . $e->getMessage(), 'error');
+        }
     }
 
     /**
