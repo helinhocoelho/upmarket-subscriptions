@@ -48,6 +48,7 @@ class AdminMenu
     {
         return [
             'name' => sanitize_text_field($data['name'] ?? ''),
+            'icon_class' => sanitize_text_field($data['icon_class'] ?? ''),
             'description' => sanitize_textarea_field($data['description'] ?? ''),
             'price' => floatval($data['price'] ?? 0),
             'billing_period' => sanitize_text_field($data['billing_period'] ?? 'month'),
@@ -99,6 +100,7 @@ class AdminMenu
 
         try {
             $name = sanitize_text_field($_POST['name'] ?? '');
+            $icon_class = sanitize_text_field($_POST['icon_class'] ?? '');
             $description = sanitize_textarea_field($_POST['description'] ?? '');
             $price = floatval($_POST['price'] ?? 0);
             $billing_period = sanitize_text_field($_POST['billing_period'] ?? 'month');
@@ -145,6 +147,7 @@ class AdminMenu
                     $price,
                     $billing_period,
                     [
+                        'icon_class' => $icon_class,
                         'description' => $description,
                         'billing_frequency' => $billing_frequency,
                         'trial_period_days' => $trial_period_days,
@@ -162,6 +165,7 @@ class AdminMenu
                 // Atualizar plano existente
                 $plan_data = [
                     'name' => $name,
+                    'icon_class' => $icon_class,
                     'description' => $description,
                     'price' => $price,
                     'billing_period' => $billing_period,
@@ -548,7 +552,19 @@ class AdminMenu
                                 <p class="description">Nome exibido para os clientes.</p>
                             </td>
                         </tr>
-                        
+
+												<tr>
+														<th scope="row"><label for="plan_icon_class">Ícone (classe CSS)</label></th>
+														<td>
+																<input type="text"
+																			id="plan_icon_class"
+																			name="icon_class"
+																			value="<?php echo esc_attr($plan->get_icon_class()); ?>"
+																			class="regular-text">
+																<p class="description">Classe CSS personalizada para exibição no front-end.</p>
+														</td>
+												</tr>
+
                         <tr>
                             <th scope="row"><label for="plan_description">Descrição</label></th>
                             <td>

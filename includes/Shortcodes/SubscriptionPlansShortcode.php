@@ -70,7 +70,7 @@ class SubscriptionPlansShortcode
         $name        = esc_html($plan->get_name());
         $price       = esc_html($plan->get_formatted_price());
         $description = esc_html($plan->get_description());
-        //$icon        = esc_attr($plan->get_icon_class() ?: 'fa-medal');
+        $icon        = esc_attr($plan->get_icon_class());
         $features    = $plan->get_features() ?: [];
         $checkout_url = esc_url($this->get_checkout_url($plan->get_id()));
 
@@ -99,7 +99,7 @@ class SubscriptionPlansShortcode
                         <div class="heading heading-with-icon icon-left">
                             <a class="heading-link" href="<?php echo $checkout_url; ?>" target="_blank" rel="noopener noreferrer">
                                 <div class="icon">
-                                    <i class="fontawesome-icon fas fa-envelope <?php //echo $icon;?> circle-yes"
+                                    <i class="fontawesome-icon <?php echo $icon; ?> circle-yes"
                                         style="
                                             border-color: var(--awb-color5);
                                             border-width: 1px;
@@ -141,7 +141,7 @@ class SubscriptionPlansShortcode
                         style="--awb-height: 20px; border-color: var(--awb-color4); border-top-width: 1px;">
                     </div>
                 </div>
-                <div class="fusion-text min-h-85" style="--awb-font-size: 0.7em;">
+                <div class="fusion-text" style="--awb-font-size: 0.7em;">
                     <ul style="list-style: none; padding: 0; text-align: center;">
                         <?php foreach ($features as $feature): ?>
                             <li style="margin-bottom: 5px;"><?php echo esc_html($feature); ?></li>
@@ -150,12 +150,14 @@ class SubscriptionPlansShortcode
                 </div>
             <?php endif; ?>
 
+						<div class="fusion-separator fusion-full-width-sep" style="align-self: center;margin-left: auto;margin-right: auto;margin-top:0px;margin-bottom:20px;width:100%;"></div>
+						
             <div style="text-align: center;">
                 <a class="fusion-button button-flat fusion-button-default-size button-default mb-60"
                     href="<?php echo $checkout_url; ?>"
-                    target="_blank" rel="noopener noreferrer"
+                    rel="noopener noreferrer"
                     style="--button_text_transform: none;">
-                    <span class="fusion-button-text"><?php echo $price; ?></span>
+                    <span class="fusion-button-text"><?php echo $price; ?> / <?php echo esc_html($plan->get_formatted_period()); ?></span>
                 </a>
             </div>
         </div>
@@ -172,6 +174,12 @@ class SubscriptionPlansShortcode
      */
     private function get_checkout_url(int $plan_id): string
     {
+        $checkout_page_id = get_option('upmkt_checkout_page_id');
+
+        if ($checkout_page_id && get_post_status($checkout_page_id) === 'publish') {
+            return add_query_arg(['plan_id' => $plan_id], get_permalink($checkout_page_id));
+        }
+
         return add_query_arg([
             'upmkt_action' => 'checkout',
             'plan_id' => $plan_id

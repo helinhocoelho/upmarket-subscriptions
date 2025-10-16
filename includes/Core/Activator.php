@@ -35,6 +35,7 @@ class Activator
         $sql[] = "CREATE TABLE {$wpdb->prefix}upmkt_subscription_plans (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(200) NOT NULL,
+						icon_class varchar(100),
             description text,
             price decimal(10,2) NOT NULL DEFAULT '0.00',
             billing_period varchar(20) NOT NULL DEFAULT 'month',

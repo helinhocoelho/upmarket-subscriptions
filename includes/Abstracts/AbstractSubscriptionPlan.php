@@ -58,6 +58,12 @@ abstract class AbstractSubscriptionPlan extends BaseEntity implements Subscripti
      */
     protected $features = [];
 
+    /**
+     * @var string Classe do ícone Font Awesome
+     * Exemplo: "fas fa-star", "fab fa-whatsapp"
+     */
+    protected $icon_class = '';
+
     // =============================================
     // GETTERS (já existentes - mantidos)
     // =============================================
@@ -177,11 +183,35 @@ abstract class AbstractSubscriptionPlan extends BaseEntity implements Subscripti
 
         $period = $periods[$this->billing_period] ?? $this->billing_period;
 
+        // Se for plural, ajusta o termo conforme o tipo
         if ($this->billing_frequency > 1) {
-            $period = $this->billing_frequency . ' ' . $period . 's';
+            switch ($this->billing_period) {
+                case self::PERIOD_DAY:
+                    $period = $this->billing_frequency . ' dias';
+                    break;
+                case self::PERIOD_MONTH:
+                    $period = $this->billing_frequency . ' meses';
+                    break;
+                case self::PERIOD_YEAR:
+                    $period = $this->billing_frequency . ' anos';
+                    break;
+                default:
+                    $period = $this->billing_frequency . ' ' . $period;
+                    break;
+            }
         }
 
         return $period;
+    }
+
+    /**
+     * Retorna a classe do ícone Font Awesome
+     *
+     * @return string
+     */
+    public function get_icon_class(): string
+    {
+        return $this->icon_class ?: 'fas fa-medal';
     }
 
     // =============================================
@@ -275,4 +305,16 @@ abstract class AbstractSubscriptionPlan extends BaseEntity implements Subscripti
     {
         $this->features = $features;
     }
+
+    /**
+     * Define a classe do ícone Font Awesome
+     *
+     * @param string $icon_class
+     * @return void
+     */
+    public function set_icon_class(string $icon_class): void
+    {
+        $this->icon_class = sanitize_text_field($icon_class);
+    }
+
 }

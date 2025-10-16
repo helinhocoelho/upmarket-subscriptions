@@ -18,8 +18,48 @@ class CheckoutShortcode
     public function __construct()
     {
         add_shortcode('upmkt_checkout', [$this, 'render_checkout']);
+        add_action('save_post', [$this, 'detect_checkout_page']);
         add_action('wp_ajax_upmkt_process_checkout', [$this, 'process_checkout']);
         add_action('wp_ajax_nopriv_upmkt_process_checkout', [$this, 'process_checkout']);
+    }
+
+    public function detect_checkout_page($post_id)
+    {
+        // Evitar auto-saves e revisões
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+
+        // Ignorar revisões - pegar apenas o post principal
+        if (wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        // Ignorar autodrafts do Gutenberg
+        $post = get_post($post_id);
+        if ($post->post_status === 'auto-draft') {
+            return;
+        }
+
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        $has_shortcode = has_shortcode($post->post_content, 'upmkt_checkout');
+
+        if ($has_shortcode) {
+            // Só atualizar se for um post publicado ou rascunho normal
+            if (in_array($post->post_status, ['publish', 'draft'])) {
+                update_option('upmkt_checkout_page_id', $post_id);
+                update_post_meta($post_id, '_upmkt_is_checkout_page', true);
+            }
+        } else {
+            // Se esta página era marcada como checkout mas perdeu o shortcode
+            if (get_post_meta($post_id, '_upmkt_is_checkout_page', true)) {
+                delete_option('upmkt_checkout_page_id');
+                delete_post_meta($post_id, '_upmkt_is_checkout_page');
+            }
+        }
     }
 
     /**

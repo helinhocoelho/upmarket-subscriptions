@@ -55,6 +55,7 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
         }
 
         $this->name = $plan['name'];
+        $this->icon_class = $plan['icon_class'] ?? '';
         $this->description = $plan['description'];
         $this->price = floatval($plan['price']);
         $this->billing_period = $plan['billing_period'];
@@ -77,10 +78,16 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
      */
     public function save(): bool
     {
+        if (empty($this->name) || $this->price < 0) {
+            Logger::instance()->error("Invalid plan data", 'entities');
+            return false;
+        }
+
         global $wpdb;
 
         $data = [
             'name' => $this->name,
+            'icon_class' => $this->icon_class,
             'description' => $this->description,
             'price' => $this->price,
             'billing_period' => $this->billing_period,
@@ -97,7 +104,7 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
                 $this->table_name,
                 $data,
                 ['id' => $this->id],
-                ['%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s'],
+                ['%s', '%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s'],
                 ['%d']
             );
 
@@ -112,7 +119,7 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
             $result = $wpdb->insert(
                 $this->table_name,
                 $data,
-                ['%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', '%s']
+                ['%s', '%s', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%s', '%s']
             );
 
             if ($result) {
@@ -141,10 +148,11 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
     {
         $plan = new self();
         $plan->name = $name;
+        $plan->icon_class = $args['icon_class'] ?? '';
+        $plan->description = $args['description'] ?? '';
         $plan->price = $price;
         $plan->billing_period = $billing_period;
         $plan->billing_frequency = $args['billing_frequency'] ?? 1;
-        $plan->description = $args['description'] ?? '';
         $plan->trial_period_days = $args['trial_period_days'] ?? 0;
         $plan->is_active = $args['is_active'] ?? true;
         $plan->features = $args['features'] ?? [];
@@ -167,6 +175,10 @@ class SubscriptionPlan extends AbstractSubscriptionPlan
         // Atualizar propriedades usando os setters
         if (isset($data['name'])) {
             $this->set_name($data['name']);
+        }
+
+        if (isset($data['icon_class'])) {
+            $this->set_icon_class($data['icon_class']);
         }
 
         if (isset($data['description'])) {
