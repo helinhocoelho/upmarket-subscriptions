@@ -16,6 +16,7 @@ class AdminMenu
     {
         add_action('admin_menu', [$this, 'add_admin_menus']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_front_scripts']);
         add_action('admin_init', [$this, 'handle_plan_actions']);
     }
 
@@ -277,7 +278,6 @@ class AdminMenu
             true
         );
 
-        // Localize script para AJAX
         wp_localize_script('upmkt-admin-js', 'upmkt_admin', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('upmkt_admin_nonce'),
@@ -285,6 +285,36 @@ class AdminMenu
                 'confirm_cancel' => 'Tem certeza que deseja cancelar esta assinatura?',
                 'confirm_delete' => 'Tem certeza que deseja excluir este plano?',
                 'processing' => 'Processando...'
+            ]
+        ]);
+    }
+
+    /**
+     * Carrega scripts e styles do front-end
+     */
+    public function enqueue_front_scripts(): void
+    {
+        wp_enqueue_style(
+            'upmkt-front-css',
+            UPMKT_PLUGIN_URL . 'assets/css/front.css',
+            [],
+            UPMKT_VERSION
+        );
+
+        wp_enqueue_script(
+            'upmkt-front-js',
+            UPMKT_PLUGIN_URL . 'assets/js/front.js',
+            ['jquery'],
+            UPMKT_VERSION,
+            true
+        );
+
+        wp_localize_script('upmkt-front-js', 'upmkt_front', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('upmkt_front_nonce'),
+            'i18n' => [
+                'processing' => 'Processando...',
+                'error' => 'Ocorreu um erro, tente novamente.',
             ]
         ]);
     }
@@ -739,20 +769,20 @@ class AdminMenu
 																									<label for="upmkt_checkout_page_id">Página de Checkout</label>
 																							</th>
 																							<td>
-																									<select name="upmkt_checkout_page_id" id="upmkt_checkout_page_id" style="min-width: 300px;">
+																									<select name="upmkt_checkout_page_id" id="upmkt_checkout_page_id">
 																											<option value="">-- Selecione uma página --</option>
 																											<?php
                                                                                                                     $pages = get_pages();
 									    foreach ($pages as $page) {
 									        $selected = selected($current_checkout_page_id, $page->ID, false);
 									        echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
-									        echo esc_html($page->post_title) . ' (ID: ' . $page->ID . ')';
+									        echo esc_html($page->post_title);
 									        echo '</option>';
 									    }
 									    ?>
 																									</select>
 																									<p class="description">
-																											Selecione a página onde o shortcode <code>[upmkt_checkout]</code> foi inserido.
+																											<small>Selecione a página onde o shortcode <code>[upmkt_checkout]</code> foi inserido.</small>
 																											<?php if ($current_checkout_page_id && get_post_status($current_checkout_page_id) === 'publish'): ?>
 																											<?php endif; ?>
 																									</p>
@@ -795,7 +825,7 @@ class AdminMenu
 					}
 					
 					#upmkt_checkout_page_id {
-							min-width: 300px;
+							width: auto;
 					}
 					</style>
 					

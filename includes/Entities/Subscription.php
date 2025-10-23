@@ -57,8 +57,10 @@ class Subscription extends AbstractSubscription
         $this->user_id = intval($subscription['user_id']);
         $this->plan_id = intval($subscription['plan_id']);
         $this->status = $subscription['status'];
-        $this->start_date = new \DateTime($subscription['start_date']);
-        $this->next_billing_date = new \DateTime($subscription['next_billing_date']);
+
+        // CORREÇÃO: Usar o método parse_date para garantir conversão segura
+        $this->start_date = $this->parse_date($subscription['start_date']);
+        $this->next_billing_date = $this->parse_date($subscription['next_billing_date']);
 
         // Carrega metadados
         $this->load_meta();
@@ -66,6 +68,26 @@ class Subscription extends AbstractSubscription
         Logger::instance()->debug("Subscription {$this->id} loaded", 'entities');
 
         return true;
+    }
+
+    /**
+     * Parse date string or DateTime object safely
+     *
+     * @param mixed $date
+     * @return \DateTime
+     */
+    private function parse_date($date): \DateTime
+    {
+        if ($date instanceof \DateTime) {
+            return $date;
+        }
+
+        if (is_string($date)) {
+            return new \DateTime($date);
+        }
+
+        // Fallback to current date
+        return new \DateTime();
     }
 
     /**
@@ -98,12 +120,17 @@ class Subscription extends AbstractSubscription
     {
         global $wpdb;
 
+        // CORREÇÃO: Garantir que as datas sejam convertidas para string
         $data = [
             'user_id' => $this->user_id,
             'plan_id' => $this->plan_id,
             'status' => $this->status,
-            'start_date' => $this->start_date->format('Y-m-d H:i:s'),
-            'next_billing_date' => $this->next_billing_date->format('Y-m-d H:i:s'),
+            'start_date' => $this->start_date instanceof \DateTime
+                ? $this->start_date->format('Y-m-d H:i:s')
+                : (string)$this->start_date,
+            'next_billing_date' => $this->next_billing_date instanceof \DateTime
+                ? $this->next_billing_date->format('Y-m-d H:i:s')
+                : (string)$this->next_billing_date,
             'updated_at' => current_time('mysql')
         ];
 
@@ -191,8 +218,10 @@ class Subscription extends AbstractSubscription
         $subscription->user_id = $user_id;
         $subscription->plan_id = $plan_id;
         $subscription->status = self::STATUS_PENDING;
-        $subscription->start_date = new \DateTime($args['start_date'] ?? current_time('mysql'));
-        $subscription->next_billing_date = new \DateTime($args['next_billing_date'] ?? current_time('mysql'));
+
+        // CORREÇÃO: Usar parse_date para garantir conversão segura
+        $subscription->start_date = $subscription->parse_date($args['start_date'] ?? current_time('mysql'));
+        $subscription->next_billing_date = $subscription->parse_date($args['next_billing_date'] ?? current_time('mysql'));
 
         // Metadados adicionais
         if (!empty($args['meta'])) {

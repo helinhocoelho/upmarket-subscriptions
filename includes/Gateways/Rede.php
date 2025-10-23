@@ -362,6 +362,7 @@ class Rede extends AbstractPaymentGateway
             'kind' => 'credit',
             'reference' => 'subscription_' . $subscription->get_id(),
             'amount' => (int)($amount * 100),
+            'currency' => 'BRL',
             'installments' => 1,
             'cardHolderName' => $payment_data['card_holder'],
             'cardNumber' => preg_replace('/\s+/', '', $payment_data['card_number']),
@@ -385,6 +386,7 @@ class Rede extends AbstractPaymentGateway
             'kind' => 'credit',
             'reference' => 'subscription_' . $subscription->get_id() . '_' . time(),
             'amount' => (int)($amount * 100),
+            'currency' => 'BRL',
             'cardToken' => $card_token,
             'subscription' => [
                 'subscriptionId' => (string)$subscription->get_id()
@@ -433,6 +435,47 @@ class Rede extends AbstractPaymentGateway
             'success' => false,
             'errors' => $errors
         ];
+    }
+
+    /**
+     * Valida dados de pagamento específicos da Rede
+     * SOBRESCREVE o método da classe pai
+     */
+    protected function validate_payment_data(array $payment_data): array
+    {
+        $errors = [];
+
+        // Validações específicas para cartão de crédito
+        if (empty($payment_data['card_number'])) {
+            $errors[] = 'Número do cartão é obrigatório';
+        } else {
+            $card_number = preg_replace('/\s+/', '', $payment_data['card_number']);
+            if (!preg_match('/^\d{13,19}$/', $card_number)) {
+                $errors[] = 'Número do cartão inválido';
+            }
+        }
+
+        if (empty($payment_data['card_expiry'])) {
+            $errors[] = 'Data de validade é obrigatória';
+        } else {
+            if (!preg_match('/^\d{2}\/\d{2}$/', $payment_data['card_expiry'])) {
+                $errors[] = 'Formato da validade inválido (use MM/AA)';
+            }
+        }
+
+        if (empty($payment_data['card_cvv'])) {
+            $errors[] = 'CVV é obrigatório';
+        } else {
+            if (!preg_match('/^\d{3,4}$/', $payment_data['card_cvv'])) {
+                $errors[] = 'CVV inválido';
+            }
+        }
+
+        if (empty($payment_data['card_holder'])) {
+            $errors[] = 'Nome no cartão é obrigatório';
+        }
+
+        return $errors;
     }
 
     /**

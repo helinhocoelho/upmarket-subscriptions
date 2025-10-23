@@ -270,16 +270,6 @@ class SubscriptionsListTable extends \WP_List_Table
         );
 
         // Ações baseadas no status
-        if ($subscription->is_active()) {
-            $actions['pause'] = sprintf(
-                '<a href="%s" title="Pausar assinatura" style="color:#d63638;">⏸️ Pausar</a>',
-                wp_nonce_url(
-                    admin_url('admin.php?page=upmkt-subscriptions-list&action=pause&subscription_id=' . $item->id),
-                    'pause_subscription_' . $item->id
-                )
-            );
-        }
-
         if ($item->status !== 'cancelled') {
             $actions['cancel'] = sprintf(
                 '<a href="%s" title="Cancelar assinatura" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja cancelar esta assinatura?\')">🚫 Cancelar</a>',
@@ -390,10 +380,9 @@ class SubscriptionsListTable extends \WP_List_Table
     public function get_bulk_actions(): array
     {
         return [
-            'activate' => '🟢 Ativar',
-            'pause' => '⏸️ Pausar',
-            'cancel' => '🔴 Cancelar',
-            'delete' => '🗑️ Excluir'
+            'activate' => 'Ativar',
+            'cancel' => 'Cancelar',
+            'delete' => 'Excluir'
         ];
     }
 
@@ -456,7 +445,6 @@ class SubscriptionsListTable extends \WP_List_Table
             add_action('admin_notices', function () use ($results, $action) {
                 $action_text = [
                     'activate' => 'ativadas',
-                    'pause' => 'pausadas',
                     'cancel' => 'canceladas',
                     'delete' => 'excluídas'
                 ];

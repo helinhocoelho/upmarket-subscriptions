@@ -37,7 +37,7 @@ class SubscriptionEdit
         }
 
         // Verificar nonce para ações destrutivas
-        if (in_array($action, ['cancel', 'pause', 'delete'])) {
+        if (in_array($action, ['cancel', 'delete'])) {
             $nonce = $_GET['_wpnonce'] ?? '';
             if (!wp_verify_nonce($nonce, $action . '_subscription_' . $subscription_id)) {
                 wp_die('Erro de segurança.');
@@ -57,10 +57,6 @@ class SubscriptionEdit
 
             case 'cancel':
                 $this->handle_cancel_subscription($subscription);
-                break;
-
-            case 'pause':
-                $this->handle_pause_subscription($subscription);
                 break;
 
             case 'resume':
@@ -262,14 +258,6 @@ class SubscriptionEdit
 															<?php submit_button('Atualizar Assinatura', 'primary', 'update_subscription'); ?>
 															
 															<div class="upmkt-danger-actions">
-																	<?php if ($subscription->is_active()): ?>
-																			<a href="<?php echo esc_url(wp_nonce_url(
-																			    admin_url('admin.php?page=upmkt-subscriptions-list&action=pause&subscription_id=' . $subscription->get_id()),
-																			    'pause_subscription_' . $subscription->get_id()
-																			)); ?>" 
-																				class="button">Pausar Assinatura</a>
-																	<?php endif; ?>
-
 																	<?php if ($subscription->get_status() !== 'cancelled'): ?>
 																			<a href="<?php echo esc_url(wp_nonce_url(
 																			    admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $subscription->get_id()),
@@ -419,16 +407,6 @@ class SubscriptionEdit
             <h3>Ações Rápidas</h3>
             
             <div class="upmkt-quick-actions">
-                <?php if ($subscription->is_active()): ?>
-                    <a href="<?php echo esc_url(wp_nonce_url(
-                        admin_url('admin.php?page=upmkt-subscriptions-list&action=pause&subscription_id=' . $subscription->get_id()),
-                        'pause_subscription_' . $subscription->get_id()
-                    )); ?>" 
-                       class="button" style="width:100%; margin-bottom:5px;">
-                       ⏸️ Pausar
-                    </a>
-                <?php endif; ?>
-
                 <?php if ($subscription->get_status() !== 'cancelled'): ?>
                     <a href="<?php echo esc_url(wp_nonce_url(
                         admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $subscription->get_id()),

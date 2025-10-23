@@ -63,6 +63,15 @@ class SubscriptionManager
             ];
         }
 
+        // Busca o plano para usar no cálculo da data
+        $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($plan_id);
+        if (!$plan->exists() || !$plan->is_active()) {
+            return [
+                'success' => false,
+                'errors' => ['Plano não encontrado ou indisponível']
+            ];
+        }
+
         // Busca o gateway
         $gateway = $this->gateway_manager->get_gateway($gateway_id);
         if (!$gateway || !$gateway->is_configured()) {
@@ -76,7 +85,7 @@ class SubscriptionManager
             // Cria a assinatura com status pending
             $subscription = Subscription::create($user_id, $plan_id, [
                 'start_date' => current_time('mysql'),
-                'next_billing_date' => $this->calculate_next_billing_date($plan_id),
+                'next_billing_date' => $this->calculate_next_billing_date($plan),
                 'meta' => [
                     'gateway_id' => $gateway_id,
                     'payment_method' => $payment_data['payment_method'] ?? 'credit_card'
@@ -89,6 +98,17 @@ class SubscriptionManager
                     'errors' => ['Failed to create subscription']
                 ];
             }
+
+            // CORREÇÃO: Adicionar amount e currency aos dados de pagamento
+            $payment_data['amount'] = $plan->get_price();
+            $payment_data['currency'] = 'BRL'; // Moeda fixa para Brasil
+
+            error_log("Payment data with amount and currency: " . print_r([
+                'amount' => $payment_data['amount'],
+                'currency' => $payment_data['currency'],
+                'card_number' => substr($payment_data['card_number'] ?? '', 0, 6) . '...', // Log parcial por segurança
+                'card_holder' => $payment_data['card_holder'] ?? ''
+            ], true));
 
             // Processa o pagamento inicial
             $payment_result = $gateway->process_initial_payment($payment_data, $subscription);
