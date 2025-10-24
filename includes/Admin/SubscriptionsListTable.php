@@ -172,21 +172,17 @@ class SubscriptionsListTable extends \WP_List_Table
         if ($user_data['exists']) {
             return sprintf(
                 '<strong><a href="%s">%s</a></strong><br>
-             <small>%s</small><br>
-             <small>ID: %d</small>',
+             <small>%s</small>',
                 esc_url($user_link),
                 esc_html($user_data['display_name']),
-                esc_html($user_data['user_email']),
-                esc_html($item->user_id)
+                esc_html($user_data['user_email'])
             );
         } else {
             return sprintf(
                 '<strong style="color: #d63638;">%s</strong><br>
-             <small>%s</small><br>
-             <small>ID: %d</small>',
+             <small>%s</small>',
                 esc_html($user_data['display_name']),
-                esc_html($user_data['user_email']),
-                esc_html($item->user_id)
+                esc_html($user_data['user_email'])
             );
         }
     }
@@ -201,11 +197,9 @@ class SubscriptionsListTable extends \WP_List_Table
 
         return sprintf(
             '<strong>%s</strong><br>
-             <small>R$ %s</small><br>
-             <small>ID: %d</small>',
+             <small>R$ %s</small>',
             esc_html($plan_name),
-            esc_html($plan_price),
-            esc_html($item->plan_id)
+            esc_html($plan_price)
         );
     }
 
@@ -230,14 +224,8 @@ class SubscriptionsListTable extends \WP_List_Table
     public function column_dates($item): string
     {
         $start_date = date('d/m/Y', strtotime($item->start_date));
-        $created_date = date('d/m/Y', strtotime($item->created_at));
 
-        return sprintf(
-            '<strong>Início:</strong> %s<br>
-             <strong>Criada:</strong> %s',
-            esc_html($start_date),
-            esc_html($created_date)
-        );
+        return sprintf('<strong>Início:</strong> %s', esc_html($start_date));
     }
 
     /**
@@ -276,14 +264,14 @@ class SubscriptionsListTable extends \WP_List_Table
 
         // Ação Editar sempre disponível
         $actions['edit'] = sprintf(
-            '<a href="%s" title="Editar assinatura">✏️ Editar</a>',
+            '<a href="%s" title="Editar assinatura">Editar</a>',
             admin_url('admin.php?page=upmkt-subscriptions-list&action=edit&subscription_id=' . $item->id)
         );
 
         // Ações baseadas no status
         if ($item->status !== 'cancelled') {
             $actions['cancel'] = sprintf(
-                '<a href="%s" title="Cancelar assinatura" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja cancelar esta assinatura?\')">🚫 Cancelar</a>',
+                '<a href="%s" title="Cancelar assinatura" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja cancelar esta assinatura?\')">Cancelar</a>',
                 wp_nonce_url(
                     admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $item->id),
                     'cancel_subscription_' . $item->id
@@ -292,7 +280,7 @@ class SubscriptionsListTable extends \WP_List_Table
         }
 
         $actions['delete'] = sprintf(
-            '<a href="%s" title="Excluir permanentemente" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja EXCLUIR permanentemente esta assinatura?\')">🗑️ Excluir</a>',
+            '<a href="%s" title="Excluir permanentemente" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja EXCLUIR permanentemente esta assinatura?\')">Excluir</a>',
             wp_nonce_url(
                 admin_url('admin.php?page=upmkt-subscriptions-list&action=delete&subscription_id=' . $item->id),
                 'delete_subscription_' . $item->id

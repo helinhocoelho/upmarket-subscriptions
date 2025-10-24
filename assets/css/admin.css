@@ -1,4 +1,16 @@
-/* UP Market Subscriptions - Admin Styles - ATUALIZADO */
+/* Colunas listagem planos */
+.wp-list-table .column-id {
+  width: 60px;
+}
+.wp-list-table .column-user_info {
+  width: 200px;
+}
+.wp-list-table .column-plan_info {
+  width: 90px;
+}
+.wp-list-table .column-status {
+  width: 120px;
+}
 
 .upmkt-admin {
   max-width: 1200px;
@@ -133,6 +145,7 @@
 
 /* Admin actions */
 .upmkt-admin-actions {
+  position: absolute;
   margin: 20px 0;
 }
 
