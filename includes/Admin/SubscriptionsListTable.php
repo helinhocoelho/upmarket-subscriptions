@@ -67,31 +67,39 @@ class SubscriptionsListTable extends \WP_List_Table
 
         $this->_column_headers = [$columns, $hidden, $sortable];
 
-        // Paginação
         $per_page = 20;
         $current_page = $this->get_pagenum();
         $offset = ($current_page - 1) * $per_page;
 
-        // Busca
+        $table_name = $wpdb->prefix . 'upmkt_subscriptions';
+        $users_table = $wpdb->users;
+
         $where = '1=1';
+        $query_params = [];
+
         if (!empty($_REQUEST['s'])) {
             $search = sanitize_text_field($_REQUEST['s']);
-            $where .= $wpdb->prepare(
-                " AND (s.id = %d OR s.user_id = %d OR u.user_email LIKE %s OR u.display_name LIKE %s)",
-                $search,
-                $search,
-                '%' . $wpdb->esc_like($search) . '%',
-                '%' . $wpdb->esc_like($search) . '%'
-            );
+            $like = '%' . $wpdb->esc_like($search) . '%';
+
+            if (is_numeric($search)) {
+                $where .= " AND (s.id = %d OR s.user_id = %d OR u.user_email LIKE %s OR u.display_name LIKE %s)";
+                $query_params[] = $search;
+                $query_params[] = $search;
+                $query_params[] = $like;
+                $query_params[] = $like;
+            } else {
+                $where .= " AND (u.user_email LIKE %s OR u.display_name LIKE %s)";
+                $query_params[] = $like;
+                $query_params[] = $like;
+            }
         }
 
-        // Filtro de status
         if (!empty($_REQUEST['status']) && $_REQUEST['status'] !== 'all') {
             $status = sanitize_text_field($_REQUEST['status']);
-            $where .= $wpdb->prepare(" AND s.status = %s", $status);
+            $where .= " AND s.status = %s";
+            $query_params[] = $status;
         }
 
-        // Ordenação
         $orderby = 's.id';
         $order = 'DESC';
 
@@ -104,25 +112,28 @@ class SubscriptionsListTable extends \WP_List_Table
             $order = strtoupper($_REQUEST['order']) === 'ASC' ? 'ASC' : 'DESC';
         }
 
-        // Busca dados com JOIN para usuários
-        $table_name = $wpdb->prefix . 'upmkt_subscriptions';
-        $users_table = $wpdb->users;
+        $sql = "
+            SELECT s.*, u.display_name, u.user_email
+            FROM {$table_name} s
+            LEFT JOIN {$users_table} u ON s.user_id = u.ID
+            WHERE {$where}
+            ORDER BY {$orderby} {$order}
+            LIMIT %d OFFSET %d
+        ";
+        $query_params[] = $per_page;
+        $query_params[] = $offset;
 
-        $this->items = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT s.*, u.display_name, u.user_email 
-                 FROM {$table_name} s 
-                 LEFT JOIN {$users_table} u ON s.user_id = u.ID 
-                 WHERE {$where} 
-                 ORDER BY {$orderby} {$order} 
-                 LIMIT %d OFFSET %d",
-                $per_page,
-                $offset
-            )
-        );
+        $this->items = !empty($query_params) ? $wpdb->get_results($wpdb->prepare($sql, ...$query_params)) : $wpdb->get_results($sql);
 
-        // Total de itens para paginação
-        $total_items = $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} s WHERE {$where}");
+        // Total de itens
+        $count_sql = "
+            SELECT COUNT(*)
+            FROM {$table_name} s
+            LEFT JOIN {$users_table} u ON s.user_id = u.ID
+            WHERE {$where}
+        ";
+        $count_params = array_slice($query_params, 0, -2); // remove LIMIT/OFFSET
+        $total_items = !empty($count_params) ? $wpdb->get_var($wpdb->prepare($count_sql, ...$count_params)) : $wpdb->get_var($count_sql);
 
         $this->set_pagination_args([
             'total_items' => $total_items,

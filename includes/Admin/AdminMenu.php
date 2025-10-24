@@ -18,6 +18,7 @@ class AdminMenu
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_front_scripts']);
         add_action('admin_init', [$this, 'handle_plan_actions']);
+        add_action('admin_init', [$this, 'maybe_export_subscriptions_csv']);
     }
 
     /**
@@ -78,6 +79,20 @@ class AdminMenu
         // CORREÇÃO: Processar salvamento do formulário
         if (isset($_POST['submit_plan']) && isset($_POST['upmkt_plan_nonce'])) {
             $this->handle_plan_save();
+        }
+    }
+
+    /**
+     * Hook de execução do export CSV
+     */
+    public function maybe_export_subscriptions_csv(): void
+    {
+        if (!current_user_can('manage_upmkt_subscriptions')) {
+            return;
+        }
+
+        if (isset($_GET['action']) && $_GET['action'] === 'export' && isset($_GET['page']) && $_GET['page'] === 'upmkt-subscriptions-list') {
+            $this->export_subscriptions_csv();
         }
     }
 
@@ -379,6 +394,13 @@ class AdminMenu
      */
     public function render_subscriptions_page(): void
     {
+        $action = $_GET['action'] ?? 'list';
+
+        if ($action === 'export') {
+            $this->export_subscriptions_csv();
+            exit;
+        }
+
         if (!current_user_can('manage_upmkt_subscriptions')) {
             wp_die('Você não tem permissão para acessar esta página.');
         }
@@ -386,38 +408,100 @@ class AdminMenu
         $action = $_GET['action'] ?? 'list';
         $subscription_id = $_GET['subscription_id'] ?? 0;
 
-        // Se for edição, mostrar página de edição
+        // Página de edição
         if ($action === 'edit' && $subscription_id) {
             $subscription_edit = new \UPMarket\Subscriptions\Admin\SubscriptionEdit();
             $subscription_edit->render_edit_page($subscription_id);
             return;
         }
 
-        // Caso contrário, mostrar lista
+        // Lista de assinaturas
         $subscriptions_table = new \UPMarket\Subscriptions\Admin\SubscriptionsListTable();
         $subscriptions_table->prepare_items();
+
+        // Parâmetros extras (hidden inputs)
+        $hidden_inputs = [
+            'orderby' => $_GET['orderby'] ?? '',
+            'order' => $_GET['order'] ?? '',
+            'status' => $_GET['status'] ?? '',
+            's' => $_GET['s'] ?? '',
+            'page' => 'upmkt-subscriptions-list'
+        ];
         ?>
-					<div class="wrap upmkt-admin">
-							<h1 class="wp-heading-inline">Todas as Assinaturas</h1>
-							
-							<?php $this->render_subscriptions_admin_notices(); ?>
-							
-							<div class="upmkt-admin-actions">
-									<a href="<?php echo admin_url('admin.php?page=upmkt-subscriptions&action=export'); ?>" class="button">
-											Exportar CSV
-									</a>
-							</div>
-							
-							<form method="get">
-									<input type="hidden" name="page" value="upmkt-subscriptions-list">
-									<?php
-                                        $subscriptions_table->search_box('Buscar assinaturas', 'search');
+    	<div class="wrap upmkt-admin">
+        <h1 class="wp-heading-inline">Todas as Assinaturas</h1>
+
+        <?php $this->render_subscriptions_admin_notices(); ?>
+
+        <div class="upmkt-admin-actions">
+						<a href="<?php echo esc_url(admin_url('admin.php?page=upmkt-subscriptions-list&action=export')); ?>" class="button">
+								Exportar CSV
+						</a>
+        </div>
+
+        <!-- O FORM é obrigatório para o WP_List_Table funcionar -->
+        <form method="post">
+            <?php
+                // Hidden inputs extras
+                foreach ($hidden_inputs as $name => $value) {
+                    if ($value !== '') {
+                        printf(
+                            '<input type="hidden" name="%s" value="%s">',
+                            esc_attr($name),
+                            esc_attr($value)
+                        );
+                    }
+                }
+
+        $subscriptions_table->search_box('Buscar assinaturas', 'search');
         $subscriptions_table->display();
         ?>
-							</form>
-					</div>
-				<?php
+        </form>
+    	</div>
+    	<?php
     }
+
+
+    /**
+     * Cria o arquivo CSV com os dados
+     */
+    private function export_subscriptions_csv(): void
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'upmkt_subscriptions';
+        $users_table = $wpdb->users;
+
+        $results = $wpdb->get_results("
+        SELECT s.*, u.user_email, u.display_name
+        FROM {$table_name} s
+        LEFT JOIN {$users_table} u ON s.user_id = u.ID
+        ORDER BY s.id ASC
+    		", ARRAY_A);
+
+        if (empty($results)) {
+            wp_die('Nenhuma assinatura encontrada para exportar.');
+        }
+
+        $filename = upmkt_generate_csv_filename();
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=' . $filename);
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, array_keys($results[0]));
+
+        foreach ($results as $row) {
+            fputcsv($output, $row);
+        }
+
+        fclose($output);
+        exit;
+    }
+
+
 
     /**
      * Renderiza notificações para assinaturas
