@@ -411,7 +411,7 @@ class AdminMenu
 							<form method="get">
 									<input type="hidden" name="page" value="upmkt-subscriptions-list">
 									<?php
-                                                    $subscriptions_table->search_box('Buscar assinaturas', 'search');
+                                        $subscriptions_table->search_box('Buscar assinaturas', 'search');
         $subscriptions_table->display();
         ?>
 							</form>

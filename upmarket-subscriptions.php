@@ -21,6 +21,9 @@ define('UPMKT_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('UPMKT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('UPMKT_VERSION', '1.0.0');
 
+// Funções globais
+require_once UPMKT_PLUGIN_PATH . 'includes/Core/Helpers.php';
+
 // Verifica se Composer está carregado
 if (!file_exists(UPMKT_PLUGIN_PATH . 'vendor/autoload.php')) {
     add_action('admin_notices', function () {
@@ -43,26 +46,23 @@ if (file_exists(UPMKT_PLUGIN_PATH . 'vendor/autoload.php')) {
     require_once UPMKT_PLUGIN_PATH . 'includes/autoload.php';
 }
 
-// Inicializa o plugin
+// Registra ativação e desativação
+register_activation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Activator', 'activate']);
+register_deactivation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Deactivator', 'deactivate']);
+
+// Iniciação após carregar todas as classes
 add_action('plugins_loaded', function () {
-    // Carreva traduções
+    // Traduções
     load_plugin_textdomain(
         'upmarket-subscriptions',
         false,
         dirname(plugin_basename(__FILE__)) . '/languages'
     );
 
-    // Inicializa o core do plugin
+    // Inicializa core
     UPMarket\Subscriptions\Core\Plugin::instance();
-});
 
-// Registra ativação e desativação
-register_activation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Activator', 'activate']);
-register_deactivation_hook(__FILE__, ['UPMarket\Subscriptions\Core\Deactivator', 'deactivate']);
-
-
-// Iniciação após carregar todas as classes
-add_action('plugins_loaded', function () {
+    // Admin
     if (is_admin()) {
         \UPMarket\Subscriptions\Admin\AdminInit::init();
     }

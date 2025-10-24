@@ -223,7 +223,6 @@ class PlansListTable extends \WP_List_Table
         return [
             'activate' => 'Ativar',
             'deactivate' => 'Desativar',
-            'delete' => 'Excluir'
         ];
     }
 

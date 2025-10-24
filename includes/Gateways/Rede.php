@@ -24,8 +24,6 @@ class Rede extends AbstractPaymentGateway
 
         $this->setup_api_config();
         parent::__construct();
-
-        // CORREÇÃO: Removido init_hooks() - Webhooks agora são dinâmicos
     }
 
     /**
@@ -35,8 +33,8 @@ class Rede extends AbstractPaymentGateway
     {
         $this->sandbox = $this->get_setting('environment') === 'sandbox';
         $this->api_url = $this->sandbox
-            ? 'https://api.userede.com.br/desenvolvedores'
-            : 'https://api.userede.com.br';
+            ? 'https://sandbox-erede.useredecloud.com.br' // Sandbox
+            : 'https://api.userede.com.br'; // Produção
         $this->pv = $this->get_setting('pv');
         $this->token = $this->get_setting('token');
     }
@@ -131,6 +129,7 @@ class Rede extends AbstractPaymentGateway
 
     /**
      * Cancela uma assinatura no gateway
+         * Transações futuras não serão processadas
      */
     public function cancel_subscription(SubscriptionInterface $subscription): bool
     {
@@ -139,8 +138,6 @@ class Rede extends AbstractPaymentGateway
             'gateways'
         );
 
-        // Na Rede, apenas marcamos como cancelado localmente
-        // Transações futuras não serão processadas
         return true;
     }
 
@@ -163,7 +160,6 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * CORREÇÃO: Webhook atualizado para sistema dinâmico
      * Processa webhooks da Rede
      */
     public function process_webhook(array $webhook_data = []): void
@@ -233,7 +229,6 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * CORREÇÃO: Campos atualizados para usar URL dinâmica
      * Retorna os campos de configuração do gateway
      */
     public function get_settings_fields(): array
@@ -252,10 +247,10 @@ class Rede extends AbstractPaymentGateway
                 'description' => 'Use Sandbox para testes e Produção para ambiente real.'
             ],
             'pv' => [
-                'title' => 'PV (Affiliation)',
+                'title' => 'PV',
                 'type' => 'text',
                 'default' => '',
-                'description' => 'Número do PV (affiliation) fornecido pela Rede.',
+                'description' => 'Número do PV fornecido pela Rede.',
                 'class' => 'regular-text',
                 'required' => true
             ],
@@ -268,9 +263,6 @@ class Rede extends AbstractPaymentGateway
                 'required' => true
             ]
         ];
-
-        // CORREÇÃO: Remove campo webhook_url customizado
-        // O campo já existe no Abstract com URL dinâmica
 
         // Insere campos específicos após "enabled"
         $final_fields = [];
@@ -293,7 +285,7 @@ class Rede extends AbstractPaymentGateway
 
         if (!empty($settings['enabled']) && $settings['enabled'] === 'yes') {
             if (empty($settings['pv'])) {
-                $errors[] = 'PV (Affiliation) é obrigatório.';
+                $errors[] = 'PV é obrigatório.';
             }
 
             if (empty($settings['token'])) {
@@ -314,26 +306,30 @@ class Rede extends AbstractPaymentGateway
     public function test_connection(): array
     {
         try {
-            // Testa conexão tentando buscar transação inexistente
-            $test_url = $this->api_url . '/v1/transactions/invalid_test_id';
+            $test_url = $this->api_url . '/v1/transactions?reference=g241025104139038';
+
             $response = wp_remote_get($test_url, [
                 'headers' => $this->get_api_headers(),
                 'timeout' => 15
             ]);
 
+            if (is_wp_error($response)) {
+                throw new \Exception($response->get_error_message());
+            }
+
             $status_code = wp_remote_retrieve_response_code($response);
 
-            // 404 é esperado (transação não existe), mas prova que API responde
-            if ($status_code === 404 || $status_code === 200) {
+            if (in_array($status_code, [200, 404])) {
                 return [
                     'success' => true,
-                    'message' => 'Conexão com a API da Rede estabelecida com sucesso!'
+                    'message' => 'Conexão com a API da Rede (Sandbox) estabelecida com sucesso! Código: ' . $status_code
                 ];
             }
 
+            $body = wp_remote_retrieve_body($response);
             return [
                 'success' => false,
-                'message' => 'Erro na conexão: Código ' . $status_code
+                'message' => "Erro na conexão: Código {$status_code} — {$body}"
             ];
 
         } catch (\Exception $e) {
@@ -343,6 +339,7 @@ class Rede extends AbstractPaymentGateway
             ];
         }
     }
+
 
     /**
      * =========================================================================
@@ -356,22 +353,21 @@ class Rede extends AbstractPaymentGateway
     private function prepare_transaction_data(array $payment_data, SubscriptionInterface $subscription): array
     {
         $amount = $this->get_subscription_amount($subscription);
+        $reference = substr('subs'.$subscription->get_id().'date'.upmkt_get_current_timestamp(), 0, 50);
 
         return [
             'capture' => true,
             'kind' => 'credit',
-            'reference' => 'subscription_' . $subscription->get_id(),
+            'reference' => $reference,
             'amount' => (int)($amount * 100),
-            'currency' => 'BRL',
             'installments' => 1,
-            'cardHolderName' => $payment_data['card_holder'],
+            'cardholderName' => $payment_data['card_holder'],
             'cardNumber' => preg_replace('/\s+/', '', $payment_data['card_number']),
             'expirationMonth' => substr($payment_data['card_expiry'], 0, 2),
             'expirationYear' => '20' . substr($payment_data['card_expiry'], 3, 2),
             'securityCode' => $payment_data['card_cvv'],
             'subscription' => true,
             'origin' => 1,
-            'distributorAffiliation' => $this->pv,
             'softDescriptor' => 'UP Market Sub'
         ];
     }
@@ -381,10 +377,12 @@ class Rede extends AbstractPaymentGateway
      */
     private function prepare_recurring_transaction_data(SubscriptionInterface $subscription, float $amount, string $card_token): array
     {
+        $reference = substr('subs'.$subscription->get_id().'date'.upmkt_get_current_timestamp(), 0, 50);
+
         return [
             'capture' => true,
             'kind' => 'credit',
-            'reference' => 'subscription_' . $subscription->get_id() . '_' . time(),
+            'reference' => $reference,
             'amount' => (int)($amount * 100),
             'currency' => 'BRL',
             'cardToken' => $card_token,
@@ -438,44 +436,85 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * Valida dados de pagamento específicos da Rede
-     * SOBRESCREVE o método da classe pai
+     * Validação de dados de pagamento — Cartão de crédito (classe derivada)
      */
     protected function validate_payment_data(array $payment_data): array
     {
-        $errors = [];
+        // Herdando as validações básicas da classe pai (amount e currency)
+        $errors = parent::validate_payment_data($payment_data);
 
-        // Validações específicas para cartão de crédito
+        // Número do cartão
         if (empty($payment_data['card_number'])) {
-            $errors[] = 'Número do cartão é obrigatório';
+            $errors[] = __('Número do cartão é obrigatório.', 'upmarket-subscriptions');
         } else {
             $card_number = preg_replace('/\s+/', '', $payment_data['card_number']);
+
             if (!preg_match('/^\d{13,19}$/', $card_number)) {
-                $errors[] = 'Número do cartão inválido';
+                $errors[] = __('Número do cartão inválido.', 'upmarket-subscriptions');
+            } elseif (!$this->sandbox && !$this->is_valid_luhn($card_number)) {
+                $errors[] = __('Número do cartão não passou na validação Luhn.', 'upmarket-subscriptions');
             }
         }
 
+        // Data de validade
         if (empty($payment_data['card_expiry'])) {
-            $errors[] = 'Data de validade é obrigatória';
+            $errors[] = __('Data de validade é obrigatória.', 'upmarket-subscriptions');
+        } elseif (!preg_match('/^\d{2}\/\d{2}$/', $payment_data['card_expiry'])) {
+            $errors[] = __('Formato da validade inválido. Use MM/AA.', 'upmarket-subscriptions');
         } else {
-            if (!preg_match('/^\d{2}\/\d{2}$/', $payment_data['card_expiry'])) {
-                $errors[] = 'Formato da validade inválido (use MM/AA)';
+            [$month, $year] = explode('/', $payment_data['card_expiry']);
+            $month = (int)$month;
+            $year = (int)('20' . $year);
+
+            if ($month < 1 || $month > 12) {
+                $errors[] = __('Mês de validade inválido.', 'upmarket-subscriptions');
+            } else {
+                $expiry = (new \DateTime())->setDate($year, $month, 1)->modify('last day of this month');
+                $now = new \DateTime();
+                if ($expiry < $now) {
+                    $errors[] = __('O cartão informado está expirado.', 'upmarket-subscriptions');
+                }
             }
         }
 
+        // CVV
         if (empty($payment_data['card_cvv'])) {
-            $errors[] = 'CVV é obrigatório';
-        } else {
-            if (!preg_match('/^\d{3,4}$/', $payment_data['card_cvv'])) {
-                $errors[] = 'CVV inválido';
-            }
+            $errors[] = __('CVV é obrigatório.', 'upmarket-subscriptions');
+        } elseif (!preg_match('/^\d{3,4}$/', $payment_data['card_cvv'])) {
+            $errors[] = __('CVV inválido.', 'upmarket-subscriptions');
         }
 
+        // Nome do titular
         if (empty($payment_data['card_holder'])) {
-            $errors[] = 'Nome no cartão é obrigatório';
+            $errors[] = __('Nome do titular do cartão é obrigatório.', 'upmarket-subscriptions');
+        } elseif (strlen($payment_data['card_holder']) < 3) {
+            $errors[] = __('Nome do titular muito curto.', 'upmarket-subscriptions');
         }
 
         return $errors;
+    }
+
+    /**
+     * Validação Luhn — garante que o número do cartão é matematicamente válido.
+     */
+    private function is_valid_luhn(string $number): bool
+    {
+        $sum = 0;
+        $alt = false;
+
+        for ($i = strlen($number) - 1; $i >= 0; $i--) {
+            $n = (int)$number[$i];
+            if ($alt) {
+                $n *= 2;
+                if ($n > 9) {
+                    $n -= 9;
+                }
+            }
+            $sum += $n;
+            $alt = !$alt;
+        }
+
+        return $sum % 10 === 0;
     }
 
     /**
@@ -534,10 +573,13 @@ class Rede extends AbstractPaymentGateway
      */
     private function get_api_headers(): array
     {
+        $authorization = 'Basic ' . base64_encode($this->pv . ':' . $this->token);
+
         return [
-            'Authorization' => 'Basic ' . base64_encode($this->pv . ':' . $this->token),
-            'Content-Type' => 'application/json',
-            'User-Agent' => 'UP Market Subscriptions/' . UPMKT_VERSION
+            'Authorization' => $authorization,
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json',
+            'User-Agent'    => 'UP Market Subscriptions/' . UPMKT_VERSION
         ];
     }
 
