@@ -188,8 +188,491 @@
   display: block;
 }
 
+/* Customer Area Styles */
+.upmkt-customer-area {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.upmkt-subscription-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 25px;
+  background: white;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.upmkt-subscription-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.upmkt-subscription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f5f5f5;
+}
+
+.upmkt-subscription-title {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.upmkt-subscription-status {
+  padding: 8px 20px;
+  border-radius: 25px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.upmkt-status-active {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  color: #155724;
+  border: 2px solid #28a745;
+}
+
+.upmkt-status-paused {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  color: #856404;
+  border: 2px solid #ffc107;
+}
+
+.upmkt-status-pending {
+  background: linear-gradient(135deg, #cce7ff, #b3d7ff);
+  color: #004085;
+  border: 2px solid #007bff;
+}
+
+.upmkt-status-cancelled {
+  background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+  color: #721c24;
+  border: 2px solid #dc3545;
+}
+
+.upmkt-status-expired {
+  background: linear-gradient(135deg, #e2e3e5, #d6d8db);
+  color: #383d41;
+  border: 2px solid #6c757d;
+}
+
+.upmkt-subscription-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.upmkt-detail-item strong {
+  display: block;
+  color: #6c757d;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.upmkt-detail-item {
+  font-size: 1.1em;
+  padding: 12px 0;
+  color: #2c3e50;
+}
+
+.upmkt-recurrence-info {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  border-left: 5px solid #2196f3;
+  box-shadow: 0 2px 10px rgba(33, 150, 243, 0.1);
+}
+
+.upmkt-recurrence-info.warning {
+  background: linear-gradient(135deg, #fff3e0, #ffcc80);
+  border-left-color: #ff9800;
+  box-shadow: 0 2px 10px rgba(255, 152, 0, 0.1);
+}
+
+.upmkt-recurrence-info.danger {
+  background: linear-gradient(135deg, #ffebee, #ffcdd2);
+  border-left-color: #f44336;
+  box-shadow: 0 2px 10px rgba(244, 67, 54, 0.1);
+}
+
+.upmkt-recurrence-info p {
+  margin: 8px 0;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.upmkt-payment-info {
+  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  border-left: 5px solid #9c27b0;
+  box-shadow: 0 2px 10px rgba(156, 39, 176, 0.1);
+}
+
+.upmkt-payment-info h4 {
+  color: #7b1fa2;
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.upmkt-payment-info p {
+  margin: 8px 0;
+  font-size: 0.95em;
+  line-height: 1.5;
+  color: #4a148c;
+}
+
+.upmkt-subscription-actions {
+  border-top: 2px solid #f5f5f5;
+  padding-top: 25px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.upmkt-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-align: center;
+  min-width: 160px;
+}
+
+.upmkt-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.upmkt-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.upmkt-btn-danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.upmkt-btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c82333, #a71e2a);
+}
+
+.upmkt-btn-warning {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529;
+}
+
+.upmkt-btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e0a800, #c69500);
+}
+
+.upmkt-btn-success {
+  background: linear-gradient(135deg, #28a745, #218838);
+  color: white;
+}
+
+.upmkt-btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #218838, #1e7e34);
+}
+
+.upmkt-btn-primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}
+
+.upmkt-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3, #004085);
+}
+
+.upmkt-btn-secondary {
+  background: linear-gradient(135deg, #6c757d, #545b62);
+  color: white;
+}
+
+.upmkt-btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #545b62, #4e555b);
+}
+
+.upmkt-actions-info {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #6c757d;
+  flex-basis: 100%;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #6c757d;
+}
+
+.upmkt-actions-info strong {
+  color: #495057;
+}
+
+/* Sistema de Notificações */
+.upmkt-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  min-width: 300px;
+  max-width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease;
+}
+
+.upmkt-notification.success {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  border: 2px solid #28a745;
+  color: #155724;
+}
+
+.upmkt-notification.error {
+  background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+  border: 2px solid #dc3545;
+  color: #721c24;
+}
+
+.upmkt-notification-content {
+  padding: 15px 20px;
+  display: flex;
+  justify-content: between;
+  align-items: center;
+}
+
+.upmkt-notification-close {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  margin-left: 15px;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.upmkt-notification-close:hover {
+  opacity: 1;
+}
+
+/* Modal de Confirmação */
+.upmkt-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upmkt-modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  animation: modalAppear 0.3s ease;
+}
+
+.upmkt-modal-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: between;
+  align-items: center;
+}
+
+.upmkt-modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.3em;
+}
+
+.upmkt-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.upmkt-modal-close:hover {
+  color: #495057;
+}
+
+.upmkt-modal-body {
+  padding: 25px;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.upmkt-modal-footer {
+  padding: 20px 25px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Animações */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Página de sucesso */
+.upmkt-checkout-success {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.upmkt-success-icon {
+  margin-bottom: 30px;
+}
+
+.upmkt-success-icon svg {
+  width: 80px;
+  height: 80px;
+}
+
+.upmkt-success-message {
+  margin: 25px 0;
+  line-height: 1.7;
+  font-size: 1.1em;
+  color: #495057;
+}
+
+.upmkt-success-actions {
+  margin-top: 35px;
+}
+
+/* Login Required */
+.upmkt-login-required {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* No Subscriptions */
+.upmkt-no-subscriptions {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.upmkt-no-subscriptions p {
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  color: #6c757d;
+}
+
+/* Loading State */
+.upmkt-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upmkt-loading::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .upmkt-subscription-details {
+    grid-template-columns: 1fr;
+  }
+
+  .upmkt-subscription-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .upmkt-subscription-actions {
+    flex-direction: column;
+  }
+
+  .upmkt-btn {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .upmkt-notification {
+    left: 10px;
+    right: 10px;
+    min-width: auto;
+  }
+
   .upmkt-form-row {
     grid-template-columns: 1fr;
     gap: 0;

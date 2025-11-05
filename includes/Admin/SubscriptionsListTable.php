@@ -327,6 +327,7 @@ class SubscriptionsListTable extends \WP_List_Table
     {
         $statuses = [
             'active' => '🟢 Ativa',
+            'paused' => '🟡 Pausada',
             'pending' => '🟡 Pendente',
             'cancelled' => '🔴 Cancelada',
             'expired' => '⚫ Expirada'
@@ -349,6 +350,7 @@ class SubscriptionsListTable extends \WP_List_Table
             <select name="status" id="filter-by-status">
                 <option value="all">Todos os status</option>
                 <option value="active" <?php selected($_REQUEST['status'] ?? '', 'active'); ?>>Ativas</option>
+								<option value="paused" <?php selected($_REQUEST['status'] ?? '', 'paused'); ?>>Pausadas</option>
                 <option value="pending" <?php selected($_REQUEST['status'] ?? '', 'pending'); ?>>Pendentes</option>
                 <option value="cancelled" <?php selected($_REQUEST['status'] ?? '', 'cancelled'); ?>>Canceladas</option>
                 <option value="expired" <?php selected($_REQUEST['status'] ?? '', 'expired'); ?>>Expiradas</option>

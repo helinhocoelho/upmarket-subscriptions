@@ -285,4 +285,38 @@ class Subscription extends AbstractSubscription
         $this->meta[$key] = $value;
     }
 
+    /**
+     * Verifica se a assinatura está pausada
+     */
+    public function is_paused(): bool
+    {
+        return $this->status === self::STATUS_PAUSED;
+    }
+
+    /**
+     * Pausa a assinatura
+     */
+    public function pause(): bool
+    {
+        if (!$this->is_active()) {
+            return false;
+        }
+
+        $this->status = self::STATUS_PAUSED;
+        return true;
+    }
+
+    /**
+     * Retoma a assinatura pausada
+     */
+    public function resume(): bool
+    {
+        if (!$this->is_paused()) {
+            return false;
+        }
+
+        $this->status = self::STATUS_ACTIVE;
+        return true;
+    }
+
 }

@@ -393,6 +393,100 @@ class SubscriptionManager
     }
 
     /**
+     * Pausa uma assinatura
+     *
+     * @param Subscription $subscription
+     * @param string $reason
+     * @return bool
+     */
+    public function pause_subscription(Subscription $subscription, string $reason = 'user_request'): bool
+    {
+        Logger::instance()->info("Pausing subscription {$subscription->get_id()}, reason: {$reason}", 'subscriptions');
+
+        try {
+            // Verificar se a assinatura pode ser pausada
+            if (!$subscription->is_active()) {
+                throw new \Exception('Apenas assinaturas ativas podem ser pausadas.');
+            }
+
+            // Salvar a próxima data de cobrança original para quando for retomada
+            $original_next_billing = $subscription->get_next_billing_date();
+            $subscription->set_meta('original_next_billing_date', $original_next_billing->format('Y-m-d H:i:s'));
+
+            // Atualizar status para pausado
+            $subscription->set_status(Subscription::STATUS_PAUSED);
+            $subscription->set_meta('paused_at', current_time('mysql'));
+            $subscription->set_meta('paused_reason', $reason);
+            $subscription->save();
+
+            // Dispara ação para notificações
+            do_action('upmkt_subscription_paused', $subscription, $reason);
+
+            Logger::instance()->info("Subscription {$subscription->get_id()} paused successfully", 'subscriptions');
+
+            return true;
+
+        } catch (\Exception $e) {
+            Logger::instance()->error("Subscription pause error: " . $e->getMessage(), 'subscriptions');
+            return false;
+        }
+    }
+
+    /**
+     * Retoma uma assinatura pausada
+     *
+     * @param Subscription $subscription
+     * @param string $reason
+     * @return bool
+     */
+    public function resume_subscription(Subscription $subscription, string $reason = 'user_request'): bool
+    {
+        Logger::instance()->info("Resuming subscription {$subscription->get_id()}, reason: {$reason}", 'subscriptions');
+
+        try {
+            // Verificar se a assinatura pode ser retomada
+            if (!$subscription->is_paused()) {
+                throw new \Exception('Apenas assinaturas pausadas podem ser retomadas.');
+            }
+
+            // Restaurar a próxima data de cobrança original
+            $original_date = $subscription->get_meta('original_next_billing_date');
+            if ($original_date) {
+                $next_billing_date = new \DateTime($original_date);
+
+                // Se a data original já passou, recalcula a partir de hoje
+                if ($next_billing_date < new \DateTime()) {
+                    $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($subscription->get_plan_id());
+                    $next_billing_date = $this->calculate_next_billing_date($plan);
+                }
+
+                $subscription->set_next_billing_date($next_billing_date);
+            }
+
+            // Atualizar status para ativo
+            $subscription->set_status(Subscription::STATUS_ACTIVE);
+            $subscription->set_meta('resumed_at', current_time('mysql'));
+            $subscription->set_meta('resumed_reason', $reason);
+
+            // Limpar metadados de pausa
+            $subscription->set_meta('original_next_billing_date', null);
+
+            $subscription->save();
+
+            // Dispara ação para notificações
+            do_action('upmkt_subscription_resumed', $subscription, $reason);
+
+            Logger::instance()->info("Subscription {$subscription->get_id()} resumed successfully", 'subscriptions');
+
+            return true;
+
+        } catch (\Exception $e) {
+            Logger::instance()->error("Subscription resume error: " . $e->getMessage(), 'subscriptions');
+            return false;
+        }
+    }
+
+    /**
      * Manipula webhooks da Rede
      */
     public function handle_rede_webhook(): void

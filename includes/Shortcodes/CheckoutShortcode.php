@@ -668,9 +668,34 @@ class CheckoutShortcode
      */
     private function get_success_url(int $subscription_id): string
     {
+        // Busca a página de área do cliente ou usa a página atual
+        $customer_area_page = $this->get_customer_area_page();
+
         return add_query_arg([
-            'upmkt_action' => 'success',
-            'subscription_id' => $subscription_id
-        ], get_permalink());
+            'subscription_id' => $subscription_id,
+            'upmkt_checkout' => 'success'
+        ], $customer_area_page);
+    }
+
+    /**
+     * Retorna a página Área do Usuário
+     *
+     */
+    private function get_customer_area_page(): string
+    {
+        global $wpdb;
+
+        $page_id = $wpdb->get_var(
+            "SELECT ID FROM {$wpdb->posts} 
+         WHERE post_content LIKE '%[upmkt_customer_area]%' 
+         AND post_status = 'publish' 
+         LIMIT 1"
+        );
+
+        if ($page_id) {
+            return get_permalink($page_id);
+        }
+
+        return home_url();
     }
 }

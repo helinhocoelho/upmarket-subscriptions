@@ -1147,6 +1147,7 @@ class AdminMenu
     {
         $statuses = [
             'active' => 'Ativa',
+            'paused' => 'Pausada',
             'pending' => 'Pendente',
             'cancelled' => 'Cancelada',
             'expired' => 'Expirada'

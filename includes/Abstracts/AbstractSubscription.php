@@ -15,6 +15,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
      * Status disponíveis
      */
     public const STATUS_ACTIVE = 'active';
+    public const STATUS_PAUSED = 'paused';
     public const STATUS_PENDING = 'pending';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_EXPIRED = 'expired';
@@ -96,6 +97,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     {
         $allowed_statuses = [
             self::STATUS_ACTIVE,
+            self::STATUS_PAUSED,
             self::STATUS_PENDING,
             self::STATUS_CANCELLED,
             self::STATUS_EXPIRED
@@ -137,6 +139,16 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     public function is_active(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Verifica se a assinatura está pausada
+     *
+     * @return bool
+     */
+    public function is_paused(): bool
+    {
+        return $this->status === self::STATUS_PAUSED;
     }
 
     /**

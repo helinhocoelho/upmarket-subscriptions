@@ -19,16 +19,19 @@ class CustomerAreaShortcode
     {
         add_shortcode('upmkt_customer_area', [$this, 'render_customer_area']);
         add_action('wp_ajax_upmkt_cancel_subscription', [$this, 'cancel_subscription']);
+        add_action('wp_ajax_upmkt_pause_subscription', [$this, 'pause_subscription']);
+        add_action('wp_ajax_upmkt_resume_subscription', [$this, 'resume_subscription']);
     }
 
     /**
      * Renderiza a área do cliente
-     *
-     * @param array $atts
-     * @return string
      */
     public function render_customer_area($atts): string
     {
+        if (isset($_GET['upmkt_checkout']) && $_GET['upmkt_checkout'] === 'success') {
+            return $this->render_checkout_success();
+        }
+
         if (!is_user_logged_in()) {
             return $this->render_login_required();
         }
@@ -44,7 +47,7 @@ class CustomerAreaShortcode
             <?php if (empty($subscriptions)): ?>
                 <div class="upmkt-no-subscriptions">
                     <p>Você não possui assinaturas ativas.</p>
-                    <p><a href="<?php echo home_url(); ?>" class="button">Conhecer nossos planos</a></p>
+                    <p><a href="<?php echo home_url('/planos'); ?>" class="button button-primary">Conhecer nossos planos</a></p>
                 </div>
             <?php else: ?>
                 <div class="upmkt-subscriptions-list">
@@ -54,102 +57,156 @@ class CustomerAreaShortcode
                 </div>
             <?php endif; ?>
         </div>
-        
-        <style>
-            .upmkt-customer-area {
-                max-width: 800px;
-                margin: 0 auto;
-            }
-            
-            .upmkt-subscription-card {
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                padding: 20px;
-                margin-bottom: 20px;
-                background: white;
-            }
-            
-            .upmkt-subscription-header {
-                display: flex;
-                justify-content: between;
-                align-items: center;
-                margin-bottom: 15px;
-            }
-            
-            .upmkt-subscription-title {
-                font-size: 1.3em;
-                font-weight: bold;
-                color: #333;
-            }
-            
-            .upmkt-subscription-status {
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 0.9em;
-                font-weight: bold;
-            }
-            
-            .upmkt-status-active {
-                background: #d4edda;
-                color: #155724;
-            }
-            
-            .upmkt-status-pending {
-                background: #fff3cd;
-                color: #856404;
-            }
-            
-            .upmkt-status-cancelled {
-                background: #f8d7da;
-                color: #721c24;
-            }
-            
-            .upmkt-subscription-details {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-bottom: 15px;
-            }
-            
-            .upmkt-detail-item strong {
-                display: block;
-                color: #666;
-                font-size: 0.9em;
-            }
-            
-            .upmkt-subscription-actions {
-                border-top: 1px solid #eee;
-                padding-top: 15px;
-                text-align: right;
-            }
-            
-            .upmkt-cancel-button {
-                background: #dc3545;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-            
-            .upmkt-cancel-button:hover {
-                background: #c82333;
-            }
-            
-            .upmkt-cancel-button:disabled {
-                background: #6c757d;
-                cursor: not-allowed;
-            }
-        </style>
         <?php
         return ob_get_clean();
     }
 
     /**
+     * Renderiza card de assinatura
+     */
+    private function render_subscription_card(Subscription $subscription): void
+    {
+        $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($subscription->get_plan_id());
+        $plan_name = $plan->exists() ? $plan->get_name() : 'Plano não encontrado';
+        $status = $subscription->get_status();
+        $next_billing = $subscription->get_next_billing_date();
+        $today = new \DateTime();
+
+        $is_active = $subscription->is_active();
+        $is_paused = $subscription->is_paused();
+        $is_cancelled = $status === 'cancelled';
+        $is_expired = $status === 'expired';
+        $show_new_subscription_btn = $is_cancelled || $is_expired || ($is_paused && $next_billing <= $today);
+        ?>
+        <div class="upmkt-subscription-card">
+            <div class="upmkt-subscription-header">
+                <div class="upmkt-subscription-title">
+                    <?php echo esc_html($plan_name); ?>
+                </div>
+                <div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($status); ?>">
+                    <?php echo esc_html($this->get_status_text($status)); ?>
+                </div>
+            </div>
+            
+            <div class="upmkt-subscription-details">
+                <div class="upmkt-detail-item">
+                    <strong>ID da Assinatura</strong>
+                    #<?php echo esc_html($subscription->get_id()); ?>
+                </div>
+                
+                <div class="upmkt-detail-item">
+                    <strong>Data de Início</strong>
+                    <?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
+                </div>
+                
+                <div class="upmkt-detail-item">
+                    <strong>Próxima Cobrança</strong>
+                    <?php echo esc_html($next_billing->format('d/m/Y')); ?>
+                </div>
+                
+                <div class="upmkt-detail-item">
+                    <strong>Valor</strong>
+                    R$ <?php echo esc_html(number_format($plan->get_price(), 2, ',', '.')); ?>
+                    <?php echo esc_html($this->get_billing_period_text($plan->get_billing_period())); ?>
+                </div>
+            </div>
+
+            <!-- Informações sobre recorrência -->
+            <?php if ($is_paused): ?>
+                <div class="upmkt-recurrence-info warning">
+                    <p><strong>⏸️ Recorrência Pausada</strong></p>
+                    <p>Você mantém o acesso até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+                    <p>Após esta data, a assinatura será cancelada automaticamente.</p>
+                </div>
+            <?php elseif ($is_active): ?>
+                <div class="upmkt-recurrence-info">
+                    <p><strong>🔄 Recorrência Ativa</strong></p>
+                    <p>Próxima cobrança: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
+                </div>
+            <?php elseif ($is_cancelled): ?>
+                <div class="upmkt-recurrence-info danger">
+                    <p><strong>❌ Assinatura Cancelada</strong></p>
+                    <p>Seu acesso será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+                </div>
+            <?php endif; ?>
+
+            <!-- Informações sobre pagamento -->
+            <?php if ($is_active || $is_paused): ?>
+                <div class="upmkt-payment-info">
+                    <h4>💳 Informações de Pagamento</h4>
+                    <p>Seus dados de cartão são armazenados de forma <strong>segura e tokenizada</strong> pelo gateway de pagamento.</p>
+                    <p><strong>Para alterar o cartão:</strong> Cancele esta assinatura e crie uma nova com o novo cartão na página de planos.</p>
+                </div>
+            <?php endif; ?>
+            
+            <div class="upmkt-subscription-actions">
+                <?php if ($is_active): ?>
+                    <!-- Assinatura Ativa: Pode pausar ou cancelar -->
+                    <button class="upmkt-btn upmkt-btn-warning" 
+                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                            data-action="upmkt_pause_subscription"
+                            onclick="upmktPauseSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                        ⏸️ Pausar Recorrência
+                    </button>
+                    
+                    <button class="upmkt-btn upmkt-btn-danger" 
+                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                            data-action="upmkt_cancel_subscription"
+                            onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                        ❌ Cancelar Assinatura
+                    </button>
+
+                    <div class="upmkt-actions-info">
+                        <small>
+                            <strong>Pausar:</strong> Mantém acesso até o vencimento, sem novas cobranças. Após o vencimento, cancela automaticamente.<br>
+                            <strong>Cancelar:</strong> Encerra definitivamente na data de vencimento. Você pode criar uma nova assinatura a qualquer momento.
+                        </small>
+                    </div>
+
+                <?php elseif ($is_paused): ?>
+                    <!-- Assinatura Pausada: Pode retomar ou cancelar -->
+                    <button class="upmkt-btn upmkt-btn-success" 
+                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                            data-action="upmkt_resume_subscription"
+                            onclick="upmktResumeSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                        ▶️ Retomar Recorrência
+                    </button>
+                    
+                    <button class="upmkt-btn upmkt-btn-danger" 
+                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                            data-action="upmkt_cancel_subscription"
+                            onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                        ❌ Cancelar Definitivamente
+                    </button>
+
+                    <div class="upmkt-actions-info">
+                        <small>Retome a recorrência para continuar com o plano após <?php echo esc_html($next_billing->format('d/m/Y')); ?>, ou cancele para encerrar definitivamente.</small>
+                    </div>
+
+                <?php elseif ($is_cancelled && $next_billing > $today): ?>
+                    <!-- Assinatura Cancelada mas ainda ativa -->
+                    <div class="upmkt-actions-info">
+                        <small>Assinatura cancelada. Acesso mantido até <?php echo esc_html($next_billing->format('d/m/Y')); ?>.</small>
+                    </div>
+
+                <?php endif; ?>
+
+                <!-- Botão para nova assinatura -->
+                <?php if ($show_new_subscription_btn): ?>
+                    <a href="<?php echo home_url('/planos'); ?>" class="upmkt-btn upmkt-btn-primary">
+                        📋 Assinar Novamente
+                    </a>
+                    <div class="upmkt-actions-info">
+                        <small>Crie uma nova assinatura para continuar aproveitando nossos serviços. Você pode escolher o mesmo plano ou experimentar outras opções.</small>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
      * Retorna assinaturas do usuário
-     *
-     * @param int $user_id
-     * @return array
      */
     private function get_user_subscriptions(int $user_id): array
     {
@@ -175,70 +232,13 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Renderiza card de assinatura
-     *
-     * @param Subscription $subscription
-     */
-    private function render_subscription_card(Subscription $subscription): void
-    {
-        $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($subscription->get_plan_id());
-        $plan_name = $plan->exists() ? $plan->get_name() : 'Plano não encontrado';
-        ?>
-        <div class="upmkt-subscription-card">
-            <div class="upmkt-subscription-header">
-                <div class="upmkt-subscription-title">
-                    <?php echo esc_html($plan_name); ?>
-                </div>
-                <div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($subscription->get_status()); ?>">
-                    <?php echo esc_html($this->get_status_text($subscription->get_status())); ?>
-                </div>
-            </div>
-            
-            <div class="upmkt-subscription-details">
-                <div class="upmkt-detail-item">
-                    <strong>ID da Assinatura</strong>
-                    #<?php echo esc_html($subscription->get_id()); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Data de Início</strong>
-                    <?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Próxima Cobrança</strong>
-                    <?php echo esc_html($subscription->get_next_billing_date()->format('d/m/Y')); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Gateway</strong>
-                    <?php echo esc_html($subscription->get_meta('gateway_id', 'N/A')); ?>
-                </div>
-            </div>
-            
-            <?php if ($subscription->is_active()): ?>
-                <div class="upmkt-subscription-actions">
-                    <button class="upmkt-cancel-button" 
-                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-                            onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-                        Cancelar Assinatura
-                    </button>
-                </div>
-            <?php endif; ?>
-        </div>
-        <?php
-    }
-
-    /**
      * Retorna texto do status
-     *
-     * @param string $status
-     * @return string
      */
     private function get_status_text(string $status): string
     {
         $statuses = [
             'active' => 'Ativa',
+            'paused' => 'Pausada',
             'pending' => 'Pendente',
             'cancelled' => 'Cancelada',
             'expired' => 'Expirada'
@@ -248,9 +248,61 @@ class CustomerAreaShortcode
     }
 
     /**
+     * Retorna texto do período de cobrança
+     */
+    private function get_billing_period_text(string $period): string
+    {
+        $periods = [
+            'day' => '/dia',
+            'month' => '/mês',
+            'year' => '/ano'
+        ];
+
+        return $periods[$period] ?? '';
+    }
+
+    /**
+     * Renderiza mensagem de sucesso no checkout
+     */
+    private function render_checkout_success(): string
+    {
+        $subscription_id = isset($_GET['subscription_id']) ? intval($_GET['subscription_id']) : 0;
+
+        ob_start();
+        ?>
+        <div class="upmkt-checkout-success">
+            <div class="upmkt-success-icon">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2">
+                    <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+            </div>
+            
+            <h2>Assinatura Criada com Sucesso!</h2>
+            
+            <div class="upmkt-success-message">
+                <p>Sua assinatura foi criada e ativada com sucesso.</p>
+                
+                <?php if ($subscription_id): ?>
+                    <p><strong>ID da Assinatura:</strong> #<?php echo esc_html($subscription_id); ?></p>
+                <?php endif; ?>
+                
+                <p>Você receberá um e-mail de confirmação em breve.</p>
+                <p>Acesse sua <strong>Área do Cliente</strong> para gerenciar sua assinatura.</p>
+            </div>
+            
+            <div class="upmkt-success-actions">
+                <a href="<?php echo esc_url(remove_query_arg(['upmkt_checkout', 'subscription_id'])); ?>" 
+                   class="upmkt-btn upmkt-btn-primary">
+                    👤 Ir para Minha Área
+                </a>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
      * Renderiza mensagem de login necessário
-     *
-     * @return string
      */
     private function render_login_required(): string
     {
@@ -260,7 +312,7 @@ class CustomerAreaShortcode
         ?>
         <div class="upmkt-login-required">
             <p>Você precisa estar logado para acessar esta área.</p>
-            <p><a href="<?php echo esc_url($login_url); ?>" class="button">Fazer Login</a></p>
+            <p><a href="<?php echo esc_url($login_url); ?>" class="upmkt-btn upmkt-btn-primary">Fazer Login</a></p>
         </div>
         <?php
         return ob_get_clean();
@@ -271,7 +323,7 @@ class CustomerAreaShortcode
      */
     public function cancel_subscription(): void
     {
-        check_ajax_referer('upmkt_nonce', 'nonce');
+        check_ajax_referer('upmkt_front_nonce', 'nonce');
 
         if (!is_user_logged_in()) {
             wp_send_json_error(['message' => 'Usuário não logado']);
@@ -298,13 +350,99 @@ class CustomerAreaShortcode
             $result = $subscription_manager->cancel_subscription($subscription, 'user_request');
 
             if ($result) {
-                wp_send_json_success(['message' => 'Assinatura cancelada com sucesso']);
+                wp_send_json_success(['message' => 'Assinatura cancelada com sucesso. Seu acesso será mantido até ' . $subscription->get_next_billing_date()->format('d/m/Y') . '. Você pode criar uma nova assinatura a qualquer momento.']);
             } else {
                 wp_send_json_error(['message' => 'Erro ao cancelar assinatura']);
             }
 
         } catch (\Exception $e) {
             Logger::instance()->error('Cancel subscription error: ' . $e->getMessage(), 'customer_area');
+            wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Pausa assinatura via AJAX
+     */
+    public function pause_subscription(): void
+    {
+        check_ajax_referer('upmkt_front_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => 'Usuário não logado']);
+            return;
+        }
+
+        $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
+        $user_id = get_current_user_id();
+
+        if (!$subscription_id) {
+            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            return;
+        }
+
+        try {
+            $subscription = new Subscription($subscription_id);
+
+            if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
+                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                return;
+            }
+
+            $subscription_manager = new \UPMarket\Subscriptions\Services\SubscriptionManager();
+            $result = $subscription_manager->pause_subscription($subscription, 'user_request');
+
+            if ($result) {
+                wp_send_json_success(['message' => 'Recorrência pausada com sucesso. Você mantém o acesso até ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
+            } else {
+                wp_send_json_error(['message' => 'Erro ao pausar recorrência']);
+            }
+
+        } catch (\Exception $e) {
+            Logger::instance()->error('Pause subscription error: ' . $e->getMessage(), 'customer_area');
+            wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Retoma assinatura via AJAX
+     */
+    public function resume_subscription(): void
+    {
+        check_ajax_referer('upmkt_front_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => 'Usuário não logado']);
+            return;
+        }
+
+        $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
+        $user_id = get_current_user_id();
+
+        if (!$subscription_id) {
+            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            return;
+        }
+
+        try {
+            $subscription = new Subscription($subscription_id);
+
+            if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
+                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                return;
+            }
+
+            $subscription_manager = new \UPMarket\Subscriptions\Services\SubscriptionManager();
+            $result = $subscription_manager->resume_subscription($subscription, 'user_request');
+
+            if ($result) {
+                wp_send_json_success(['message' => 'Recorrência retomada com sucesso! Próxima cobrança: ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
+            } else {
+                wp_send_json_error(['message' => 'Erro ao retomar recorrência']);
+            }
+
+        } catch (\Exception $e) {
+            Logger::instance()->error('Resume subscription error: ' . $e->getMessage(), 'customer_area');
             wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
         }
     }

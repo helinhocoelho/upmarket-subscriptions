@@ -242,4 +242,189 @@ jQuery(document).ready(function ($) {
       });
     });
   }
+
+  // =============================================
+  // CUSTOMER AREA FUNCTIONALITY
+  // =============================================
+
+  // Sistema de Notificações
+  function upmktShowNotification(message, type = "success") {
+    // Criar notificação se não existir
+    let notification = document.getElementById("upmkt-notification");
+    if (!notification) {
+      notification = document.createElement("div");
+      notification.id = "upmkt-notification";
+      notification.className = "upmkt-notification";
+      notification.innerHTML = `
+        <div class="upmkt-notification-content">
+          <span id="upmkt-notification-message"></span>
+          <button type="button" class="upmkt-notification-close">&times;</button>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Adicionar event listener para fechar
+      notification
+        .querySelector(".upmkt-notification-close")
+        .addEventListener("click", upmktHideNotification);
+    }
+
+    const messageEl = document.getElementById("upmkt-notification-message");
+    notification.className = `upmkt-notification ${type}`;
+    messageEl.textContent = message;
+    notification.style.display = "block";
+
+    // Auto-close após 5 segundos
+    setTimeout(() => {
+      upmktHideNotification();
+    }, 5000);
+  }
+
+  function upmktHideNotification() {
+    const notification = document.getElementById("upmkt-notification");
+    if (notification) {
+      notification.style.display = "none";
+    }
+  }
+
+  // Modal de Confirmação
+  function upmktShowConfirmModal(title, message, onConfirm) {
+    // Criar modal se não existir
+    let modal = document.getElementById("upmkt-confirm-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "upmkt-confirm-modal";
+      modal.className = "upmkt-modal";
+      modal.style.display = "none";
+      modal.innerHTML = `
+        <div class="upmkt-modal-content">
+          <div class="upmkt-modal-header">
+            <h3 id="upmkt-confirm-title">Confirmação</h3>
+            <button type="button" class="upmkt-modal-close">&times;</button>
+          </div>
+          <div class="upmkt-modal-body">
+            <p id="upmkt-confirm-message"></p>
+          </div>
+          <div class="upmkt-modal-footer">
+            <button type="button" class="upmkt-btn upmkt-btn-secondary" id="upmkt-confirm-cancel">Cancelar</button>
+            <button type="button" class="upmkt-btn upmkt-btn-primary" id="upmkt-confirm-ok">Confirmar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // Adicionar event listeners
+      const closeBtn = modal.querySelector(".upmkt-modal-close");
+      const cancelBtn = document.getElementById("upmkt-confirm-cancel");
+
+      closeBtn.addEventListener("click", () => (modal.style.display = "none"));
+      cancelBtn.addEventListener("click", () => (modal.style.display = "none"));
+
+      modal.addEventListener("click", function (e) {
+        if (e.target === this) {
+          this.style.display = "none";
+        }
+      });
+    }
+
+    document.getElementById("upmkt-confirm-title").textContent = title;
+    document.getElementById("upmkt-confirm-message").textContent = message;
+
+    modal.style.display = "flex";
+
+    // Configurar evento de confirmação
+    const confirmOk = document.getElementById("upmkt-confirm-ok");
+    const oldOnClick = confirmOk.onclick;
+    confirmOk.onclick = () => {
+      modal.style.display = "none";
+      confirmOk.onclick = oldOnClick; // Restaurar evento anterior
+      onConfirm();
+    };
+  }
+
+  // Ações das Assinaturas
+  window.upmktCancelSubscription = function (subscriptionId) {
+    upmktShowConfirmModal(
+      "Cancelar Assinatura",
+      "Tem certeza que deseja cancelar esta assinatura?\n\nApós o cancelamento, você perderá o acesso ao plano na data de vencimento. Você poderá criar uma nova assinatura a qualquer momento.",
+      () =>
+        upmktHandleSubscriptionAction(
+          "upmkt_cancel_subscription",
+          subscriptionId
+        )
+    );
+  };
+
+  window.upmktPauseSubscription = function (subscriptionId) {
+    upmktShowConfirmModal(
+      "Pausar Recorrência",
+      "Deseja pausar a recorrência?\n\nVocê manterá o acesso até a data de vencimento, mas não serão feitas novas cobranças. Após a data de vencimento, a assinatura será cancelada automaticamente.",
+      () =>
+        upmktHandleSubscriptionAction(
+          "upmkt_pause_subscription",
+          subscriptionId
+        )
+    );
+  };
+
+  window.upmktResumeSubscription = function (subscriptionId) {
+    upmktShowConfirmModal(
+      "Retomar Recorrência",
+      "Deseja retomar a recorrência?\n\nAs cobranças serão reiniciadas a partir da próxima data de vencimento. Sua assinatura voltará ao estado ativo.",
+      () =>
+        upmktHandleSubscriptionAction(
+          "upmkt_resume_subscription",
+          subscriptionId
+        )
+    );
+  };
+
+  function upmktHandleSubscriptionAction(action, subscriptionId) {
+    const button = document.querySelector(
+      `[data-subscription-id="${subscriptionId}"][data-action="${action}"]`
+    );
+    if (!button) return;
+
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML =
+      '<span class="upmkt-loading">⏳ ' +
+      upmkt_front.i18n.processing +
+      "</span>";
+
+    // Usar jQuery para consistência com o resto do código
+    $.ajax({
+      url: upmkt_front.ajax_url,
+      type: "POST",
+      data: {
+        action: action,
+        subscription_id: subscriptionId,
+        nonce: upmkt_front.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          upmktShowNotification(
+            response.data.message || "Ação realizada com sucesso!",
+            "success"
+          );
+          // Recarregar a página após 2 segundos para mostrar mudanças
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
+        } else {
+          upmktShowNotification(
+            response.data.message || upmkt_front.i18n.error,
+            "error"
+          );
+          button.disabled = false;
+          button.innerHTML = originalText;
+        }
+      },
+      error: function () {
+        upmktShowNotification(upmkt_front.i18n.error, "error");
+        button.disabled = false;
+        button.innerHTML = originalText;
+      },
+    });
+  }
 });

@@ -155,6 +155,7 @@ class SubscriptionEdit
 																					<td>
 																							<select name="status" id="subscription_status" class="regular-text">
 																									<option value="active" <?php selected($subscription->get_status(), 'active'); ?>>Ativa</option>
+																									<option value="paused" <?php selected($subscription->get_status(), 'paused'); ?>>Pausada</option>
 																									<option value="cancelled" <?php selected($subscription->get_status(), 'cancelled'); ?>>Cancelada</option>
 																									<option value="expired" <?php selected($subscription->get_status(), 'expired'); ?>>Expirada</option>
 																									<option value="pending" <?php selected($subscription->get_status(), 'pending'); ?>>Pendente</option>
@@ -715,6 +716,7 @@ class SubscriptionEdit
     {
         $statuses = [
             'active' => 'Ativa',
+            'paused' => 'Pausada',
             'pending' => 'Pendente',
             'cancelled' => 'Cancelada',
             'expired' => 'Expirada'
