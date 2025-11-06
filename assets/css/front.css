@@ -620,6 +620,104 @@
   animation: spin 1s linear infinite;
 }
 
+/* Formulário de Login */
+.upmkt-login-required {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+}
+
+.upmkt-login-container {
+  background: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--gray-200);
+}
+
+.upmkt-login-container h3 {
+  text-align: center;
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-xl);
+  color: var(--gray-900);
+  font-weight: 600;
+}
+
+.upmkt-login-container > p {
+  text-align: center;
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--gray-600);
+  font-size: var(--font-size-base);
+}
+
+.upmkt-login-form {
+  margin-bottom: var(--spacing-base);
+}
+
+.upmkt-remember-me {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-base);
+  cursor: pointer;
+}
+
+.upmkt-remember-me input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.upmkt-remember-me p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+.upmkt-login-links {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-base);
+  border-top: 1px solid var(--gray-200);
+}
+
+.upmkt-login-links p {
+  margin: var(--spacing-sm) 0;
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+.upmkt-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.upmkt-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* Estados do formulário de login */
+.upmkt-login-form .upmkt-submit-button {
+  margin-top: var(--spacing-sm);
+}
+
+.upmkt-login-form .upmkt-messages {
+  margin-top: var(--spacing-base);
+}
+
+/* Responsividade do login */
+@media (max-width: 480px) {
+  .upmkt-login-required {
+    padding: var(--spacing-base);
+  }
+
+  .upmkt-login-container {
+    padding: var(--spacing-lg);
+  }
+}
+
 /* Animações */
 @keyframes slideInRight {
   from {

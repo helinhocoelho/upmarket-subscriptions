@@ -21,6 +21,7 @@ class CustomerAreaShortcode
         add_action('wp_ajax_upmkt_cancel_subscription', [$this, 'cancel_subscription']);
         add_action('wp_ajax_upmkt_pause_subscription', [$this, 'pause_subscription']);
         add_action('wp_ajax_upmkt_resume_subscription', [$this, 'resume_subscription']);
+        //add_action('wp_ajax_nopriv_upmkt_process_login', [$this, 'process_login']);
     }
 
     /**
@@ -302,19 +303,74 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Renderiza mensagem de login necessário
+     * Renderiza mensagem de login com formulário PADRÃO WORDPRESS
      */
     private function render_login_required(): string
     {
-        $login_url = wp_login_url(get_permalink());
-
         ob_start();
         ?>
-        <div class="upmkt-login-required">
-            <p>Você precisa estar logado para acessar esta área.</p>
-            <p><a href="<?php echo esc_url($login_url); ?>" class="upmkt-btn upmkt-btn-primary">Fazer Login</a></p>
-        </div>
-        <?php
+					<div class="upmkt-login-required">
+							<div class="upmkt-login-container">
+									<h3>Acesse sua conta</h3>
+									<p>Faça login para gerenciar suas assinaturas.</p>
+									
+									<!-- FORMULÁRIO PADRÃO WORDPRESS COM CLASSES PERSONALIZADAS -->
+									<form name="upmkt-login-form" id="upmkt-login-form" class="upmkt-login-form" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">
+											<div class="upmkt-form-group">
+													<input type="text" 
+																name="log" 
+																id="user_login" 
+																class="input" 
+																value="" 
+																size="20" 
+																required 
+																placeholder="e-mail">
+											</div>
+											
+											<div class="upmkt-form-group">
+													<input type="password" 
+																name="pwd" 
+																id="user_pass" 
+																class="input" 
+																value="" 
+																size="20" 
+																required 
+																placeholder="senha">
+											</div>
+											
+											<div class="upmkt-remember-me">
+													<input name="rememberme" type="checkbox" id="rememberme" value="forever">
+													<p>Manter conectado</p>
+											</div>
+											
+											<div class="upmkt-form-group">
+													<input type="submit" 
+																name="wp-submit" 
+																id="wp-submit" 
+																class="upmkt-btn upmkt-btn-primary upmkt-submit-button" 
+																value="Entrar">
+													
+													<!-- Campos hidden importantes -->
+													<input type="hidden" name="redirect_to" value="<?php echo esc_url(get_permalink()); ?>">
+											</div>
+											
+											<div class="upmkt-login-links">
+													<p>
+															<a href="<?php echo esc_url(wp_lostpassword_url()); ?>" class="upmkt-link">
+																	Esqueceu sua senha?
+															</a>
+													</p>
+													<p>
+															Não tem uma conta? 
+															<a href="<?php echo esc_url(home_url('/planos')); ?>" class="upmkt-link">
+																	Assine agora
+															</a>
+													</p>
+											</div>
+									</form>
+							</div>
+					</div>
+				<?php
         return ob_get_clean();
     }
 

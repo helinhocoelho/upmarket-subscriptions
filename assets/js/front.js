@@ -130,62 +130,7 @@ jQuery(document).ready(function ($) {
     });
   }
 
-  // Processamento do login - SÓ SE EXISTIR
-  if ($("#upmkt-login-form").length > 0) {
-    $("#upmkt-login-form").on("submit", function (e) {
-      e.preventDefault();
-
-      var $form = $(this);
-      var $submit = $form.find(".upmkt-submit-button");
-      var $loading = $form.find(".upmkt-loading");
-      var $messages = $form.find(".upmkt-messages");
-
-      $submit.prop("disabled", true);
-      $loading.show();
-      $messages.empty();
-
-      $.ajax({
-        url: upmkt_front.ajax_url,
-        type: "POST",
-        data: $form.serialize(),
-        success: function (response) {
-          if (response.success) {
-            $messages.html(
-              '<div class="upmkt-message success">' +
-                response.data.message +
-                "</div>"
-            );
-            // Recarrega a página para usuário logado acessar o checkout
-            setTimeout(function () {
-              window.location.reload();
-            }, 1500);
-          } else {
-            var errorHtml =
-              '<div class="upmkt-message error"><strong>Erro:</strong><ul>';
-            response.data.errors.forEach(function (error) {
-              errorHtml += "<li>" + error + "</li>";
-            });
-            errorHtml += "</ul></div>";
-
-            $messages.html(errorHtml);
-          }
-        },
-        error: function () {
-          $messages.html(
-            '<div class="upmkt-message error">' +
-              upmkt_front.i18n.error +
-              "</div>"
-          );
-        },
-        complete: function () {
-          $submit.prop("disabled", false);
-          $loading.hide();
-        },
-      });
-    });
-  }
-
-  // Processamento do checkout - SÓ SE EXISTIR
+  // Processamento do checkout
   if ($("#upmkt-checkout-form").length > 0) {
     $("#upmkt-checkout-form").on("submit", function (e) {
       e.preventDefault();

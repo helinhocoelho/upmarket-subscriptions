@@ -324,14 +324,20 @@ class AdminMenu
             true
         );
 
+        // CORREÇÃO: Garantir que o nonce seja criado corretamente
+        $nonce = wp_create_nonce('upmkt_front_nonce');
+
         wp_localize_script('upmkt-front-js', 'upmkt_front', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('upmkt_front_nonce'),
+            'nonce' => $nonce,
             'i18n' => [
                 'processing' => 'Processando...',
                 'error' => 'Ocorreu um erro, tente novamente.',
             ]
         ]);
+
+        // DEBUG: Log temporário
+        error_log('UPMKT Front Scripts - Nonce: ' . $nonce);
     }
 
     /**
