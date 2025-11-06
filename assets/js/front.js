@@ -297,32 +297,37 @@ jQuery(document).ready(function ($) {
       modal.className = "upmkt-modal";
       modal.style.display = "none";
       modal.innerHTML = `
-        <div class="upmkt-modal-content">
-          <div class="upmkt-modal-header">
-            <h3 id="upmkt-confirm-title">Confirmação</h3>
-            <button type="button" class="upmkt-modal-close">&times;</button>
-          </div>
-          <div class="upmkt-modal-body">
-            <p id="upmkt-confirm-message"></p>
-          </div>
-          <div class="upmkt-modal-footer">
-            <button type="button" class="upmkt-btn upmkt-btn-secondary" id="upmkt-confirm-cancel">Cancelar</button>
-            <button type="button" class="upmkt-btn upmkt-btn-primary" id="upmkt-confirm-ok">Confirmar</button>
-          </div>
-        </div>
-      `;
+            <div class="upmkt-modal-content">
+                <div class="upmkt-modal-header">
+                    <h3 id="upmkt-confirm-title">Confirmação</h3>
+                    <button type="button" class="upmkt-modal-close">&times;</button>
+                </div>
+                <div class="upmkt-modal-body">
+                    <p id="upmkt-confirm-message"></p>
+                </div>
+                <div class="upmkt-modal-footer">
+                    <button type="button" class="upmkt-btn upmkt-btn-secondary" id="upmkt-confirm-cancel">Cancelar</button>
+                    <button type="button" class="upmkt-btn upmkt-btn-primary" id="upmkt-confirm-ok">Confirmar</button>
+                </div>
+            </div>
+        `;
       document.body.appendChild(modal);
 
-      // Adicionar event listeners
+      // Adicionar event listeners CORRIGIDOS
       const closeBtn = modal.querySelector(".upmkt-modal-close");
       const cancelBtn = document.getElementById("upmkt-confirm-cancel");
 
-      closeBtn.addEventListener("click", () => (modal.style.display = "none"));
-      cancelBtn.addEventListener("click", () => (modal.style.display = "none"));
+      const closeModal = () => {
+        modal.style.display = "none";
+        modal.classList.remove("show");
+      };
+
+      closeBtn.addEventListener("click", closeModal);
+      cancelBtn.addEventListener("click", closeModal);
 
       modal.addEventListener("click", function (e) {
         if (e.target === this) {
-          this.style.display = "none";
+          closeModal();
         }
       });
     }
@@ -330,14 +335,20 @@ jQuery(document).ready(function ($) {
     document.getElementById("upmkt-confirm-title").textContent = title;
     document.getElementById("upmkt-confirm-message").textContent = message;
 
+    // MOSTRAR MODAL CORRETAMENTE
     modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("show"), 10); // Pequeno delay para animação
 
     // Configurar evento de confirmação
     const confirmOk = document.getElementById("upmkt-confirm-ok");
-    const oldOnClick = confirmOk.onclick;
-    confirmOk.onclick = () => {
+
+    // Remover event listeners anteriores para evitar duplicação
+    const newConfirmOk = confirmOk.cloneNode(true);
+    confirmOk.parentNode.replaceChild(newConfirmOk, confirmOk);
+
+    newConfirmOk.onclick = () => {
       modal.style.display = "none";
-      confirmOk.onclick = oldOnClick; // Restaurar evento anterior
+      modal.classList.remove("show");
       onConfirm();
     };
   }
