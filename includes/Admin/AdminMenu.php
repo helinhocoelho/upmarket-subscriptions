@@ -832,109 +832,176 @@ class AdminMenu
 
         $active_tab = $_GET['tab'] ?? 'general';
         $current_checkout_page_id = get_option('upmkt_checkout_page_id');
+        $current_plans_page_id = get_option('upmkt_plans_page_id');
+        $current_customer_area_page_id = get_option('upmkt_customer_area_page_id');
         ?>
-					<div class="wrap upmkt-admin">
-							<h1>Configurações - Assinaturas</h1>
-							
-							<nav class="nav-tab-wrapper">
-									<a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
-											Geral
-									</a>
-									<?php do_action('upmkt_admin_settings_tabs'); ?>
-							</nav>
-							
-							<div class="upmkt-settings-content">
-									<?php if ($active_tab === 'general'): ?>
-											<div id="general" class="tab-content active">
-													<div class="upmkt-card">
-															<h2>Configurações Gerais</h2>
-															
-															<form method="post">
-																	<?php wp_nonce_field('upmkt_save_settings', 'upmkt_settings_nonce'); ?>
-																	
-																	<table class="form-table">
-																			<tbody>
-																					<tr>
-																							<th scope="row">
-																									<label for="upmkt_checkout_page_id">Página de Checkout</label>
-																							</th>
-																							<td>
-																									<select name="upmkt_checkout_page_id" id="upmkt_checkout_page_id">
-																											<option value="">-- Selecione uma página --</option>
-																											<?php
-                                                                                                                    $pages = get_pages();
-									    foreach ($pages as $page) {
-									        $selected = selected($current_checkout_page_id, $page->ID, false);
-									        echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
-									        echo esc_html($page->post_title);
-									        echo '</option>';
-									    }
-									    ?>
-																									</select>
-																									<p class="description">
-																											<small>Selecione a página onde o shortcode <code>[upmkt_checkout]</code> foi inserido.</small>
-																											<?php if ($current_checkout_page_id && get_post_status($current_checkout_page_id) === 'publish'): ?>
-																											<?php endif; ?>
-																									</p>
-																							</td>
-																					</tr>
-																			</tbody>
-																	</table>
-																	
-																	<p class="submit">
-																			<input type="submit" name="submit_upmkt_settings" class="button button-primary" value="Salvar Configurações">
-																	</p>
-															</form>
-													</div>
-											</div>
-									<?php endif; ?>
-									
-									<?php do_action('upmkt_admin_settings_content'); ?>
-							</div>
-					</div>
-					
-					<style>
-					.nav-tab-wrapper {
-							margin-bottom: 20px;
-					}
-					
-					.tab-content {
-							display: none;
-					}
-					
-					.tab-content.active {
-							display: block;
-					}
-					
-					.upmkt-settings-content .form-table {
-							margin-top: 0;
-					}
-					
-					.upmkt-settings-content .form-table th {
-							width: 200px;
-					}
-					
-					#upmkt_checkout_page_id {
-							width: auto;
-					}
-					</style>
-					
-					<script>
-					jQuery(document).ready(function($) {
-							// Tab navigation
-							$('.nav-tab').on('click', function(e) {
-									e.preventDefault();
-									var target = $(this).attr('href');
-									
-									$('.nav-tab').removeClass('nav-tab-active');
-									$('.tab-content').removeClass('active');
-									
-									$(this).addClass('nav-tab-active');
-									$(target).addClass('active');
-							});
-					});
-					</script>
-				<?php
+    <div class="wrap upmkt-admin">
+        <h1>Configurações - Assinaturas</h1>
+        
+        <nav class="nav-tab-wrapper">
+            <a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
+                Geral
+            </a>
+            <?php do_action('upmkt_admin_settings_tabs'); ?>
+        </nav>
+        
+        <div class="upmkt-settings-content">
+            <?php if ($active_tab === 'general'): ?>
+                <div id="general" class="tab-content active">
+                    <div class="upmkt-card">
+                        <h2>Configurações Gerais</h2>
+                        
+                        <form method="post">
+                            <?php wp_nonce_field('upmkt_save_settings', 'upmkt_settings_nonce'); ?>
+                            
+                            <table class="form-table">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="upmkt_plans_page_id">Página de Planos</label>
+                                        </th>
+                                        <td>
+                                            <select name="upmkt_plans_page_id" id="upmkt_plans_page_id">
+                                                <option value="">-- Selecione uma página --</option>
+                                                <?php
+                $pages = get_pages();
+                foreach ($pages as $page) {
+                    $selected = selected($current_plans_page_id, $page->ID, false);
+                    echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
+                    echo esc_html($page->post_title);
+                    echo '</option>';
+                }
+                ?>
+                                            </select>
+                                            <p class="description">
+                                                <small>Selecione a página onde o shortcode <code>[upmkt_subscription_plans]</code> foi inserido.</small>
+                                                <?php if ($current_plans_page_id && get_post_status($current_plans_page_id) === 'publish'): ?>
+                                                    <br><small><a href="<?php echo get_permalink($current_plans_page_id); ?>" target="_blank">Ver página</a></small>
+                                                <?php endif; ?>
+                                            </p>
+                                        </td>
+                                    </tr>
+																																			
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="upmkt_checkout_page_id">Página de Checkout</label>
+                                        </th>
+                                        <td>
+                                            <select name="upmkt_checkout_page_id" id="upmkt_checkout_page_id">
+                                                <option value="">-- Selecione uma página --</option>
+                                                <?php
+                                                    $pages = get_pages();
+                foreach ($pages as $page) {
+                    $selected = selected($current_checkout_page_id, $page->ID, false);
+                    echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
+                    echo esc_html($page->post_title);
+                    echo '</option>';
+                }
+                ?>
+                                            </select>
+                                            <p class="description">
+                                                <small>Selecione a página onde o shortcode <code>[upmkt_checkout]</code> foi inserido.</small>
+                                                <?php if ($current_checkout_page_id && get_post_status($current_checkout_page_id) === 'publish'): ?>
+                                                    <br><small><a href="<?php echo get_permalink($current_checkout_page_id); ?>" target="_blank">Ver página</a></small>
+                                                <?php endif; ?>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                                                       
+                                    <tr>
+                                        <th scope="row">
+                                            <label for="upmkt_customer_area_page_id">Página da Área do Cliente</label>
+                                        </th>
+                                        <td>
+                                            <select name="upmkt_customer_area_page_id" id="upmkt_customer_area_page_id">
+                                                <option value="">-- Selecione uma página --</option>
+                                                <?php
+                $pages = get_pages();
+                foreach ($pages as $page) {
+                    $selected = selected($current_customer_area_page_id, $page->ID, false);
+                    echo '<option value="' . esc_attr($page->ID) . '" ' . $selected . '>';
+                    echo esc_html($page->post_title);
+                    echo '</option>';
+                }
+                ?>
+                                            </select>
+                                            <p class="description">
+                                                <small>Selecione a página onde o shortcode <code>[upmkt_customer_area]</code> foi inserido.</small>
+                                                <?php if ($current_customer_area_page_id && get_post_status($current_customer_area_page_id) === 'publish'): ?>
+                                                    <br><small><a href="<?php echo get_permalink($current_customer_area_page_id); ?>" target="_blank">Ver página</a></small>
+                                                <?php endif; ?>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                            <p class="submit">
+                                <input type="submit" name="submit_upmkt_settings" class="button button-primary" value="Salvar Configurações">
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <?php do_action('upmkt_admin_settings_content'); ?>
+        </div>
+    </div>
+    
+    <style>
+    .nav-tab-wrapper {
+        margin-bottom: 20px;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .upmkt-settings-content .form-table {
+        margin-top: 0;
+    }
+    
+    .upmkt-settings-content .form-table th {
+        width: 200px;
+    }
+    
+    #upmkt_checkout_page_id,
+    #upmkt_plans_page_id,
+    #upmkt_customer_area_page_id {
+        width: auto;
+        min-width: 300px;
+    }
+    
+    .upmkt-settings-content .description small {
+        color: #666;
+        font-size: 12px;
+    }
+    
+    .upmkt-settings-content .description a {
+        color: #0073aa;
+    }
+    </style>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        // Tab navigation
+        $('.nav-tab').on('click', function(e) {
+            e.preventDefault();
+            var target = $(this).attr('href');
+            
+            $('.nav-tab').removeClass('nav-tab-active');
+            $('.tab-content').removeClass('active');
+            
+            $(this).addClass('nav-tab-active');
+            $(target).addClass('active');
+        });
+    });
+    </script>
+    <?php
     }
 
     /**
@@ -953,15 +1020,55 @@ class AdminMenu
         }
 
         try {
+            // Array para controlar quais páginas foram salvas/removidas
+            $saved_pages = [];
+            $removed_pages = [];
+
             // Salvar página de checkout
             $checkout_page_id = intval($_POST['upmkt_checkout_page_id'] ?? 0);
-
             if ($checkout_page_id > 0) {
                 update_option('upmkt_checkout_page_id', $checkout_page_id);
-                $this->add_admin_notice('Configurações salvas com sucesso!', 'success');
+                $saved_pages[] = 'Checkout';
             } else {
                 delete_option('upmkt_checkout_page_id');
-                $this->add_admin_notice('Página de checkout removida.', 'success');
+                $removed_pages[] = 'Checkout';
+            }
+
+            // Salvar página de planos
+            $plans_page_id = intval($_POST['upmkt_plans_page_id'] ?? 0);
+            if ($plans_page_id > 0) {
+                update_option('upmkt_plans_page_id', $plans_page_id);
+                $saved_pages[] = 'Planos';
+            } else {
+                delete_option('upmkt_plans_page_id');
+                $removed_pages[] = 'Planos';
+            }
+
+            // Salvar página da área do cliente
+            $customer_area_page_id = intval($_POST['upmkt_customer_area_page_id'] ?? 0);
+            if ($customer_area_page_id > 0) {
+                update_option('upmkt_customer_area_page_id', $customer_area_page_id);
+                $saved_pages[] = 'Área do Cliente';
+            } else {
+                delete_option('upmkt_customer_area_page_id');
+                $removed_pages[] = 'Área do Cliente';
+            }
+
+            // Mensagem de sucesso personalizada
+            $messages = [];
+
+            if (!empty($saved_pages)) {
+                $messages[] = 'Páginas salvas: ' . implode(', ', $saved_pages);
+            }
+
+            if (!empty($removed_pages)) {
+                $messages[] = 'Páginas removidas: ' . implode(', ', $removed_pages);
+            }
+
+            if (!empty($messages)) {
+                $this->add_admin_notice('Configurações salvas com sucesso! ' . implode(' | ', $messages), 'success');
+            } else {
+                $this->add_admin_notice('Nenhuma alteração foi realizada.', 'info');
             }
 
         } catch (\Exception $e) {

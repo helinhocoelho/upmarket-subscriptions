@@ -38,7 +38,8 @@ class CheckoutShortcode
         $plan_id = isset($_GET['plan_id']) ? intval($_GET['plan_id']) : 0;
 
         if (!$plan_id) {
-            return '<p>Plano não especificado. <a href="' . home_url() . '">Voltar para a página inicial</a>.</p>';
+            $plans_url = get_plans_page('planos');
+            return '<p>Plano não especificado. <a href="' . esc_url($plans_url) . '">Escolha um plano para continuar!</a>.</p>';
         }
 
         $plan = new SubscriptionPlan($plan_id);
@@ -93,13 +94,13 @@ class CheckoutShortcode
                         
                         <div class="upmkt-form-row">
                             <div class="upmkt-form-group">
-                                <label for="card_expiry">Validade (MM/AA)</label>
+                                <label for="card_expiry">Validade</label>
                                 <input type="text" id="card_expiry" name="card_expiry" placeholder="MM/AA" required>
                             </div>
                             
                             <div class="upmkt-form-group">
                                 <label for="card_cvv">CVV</label>
-                                <input type="text" id="card_cvv" name="card_cvv" placeholder="123" required>
+                                <input type="text" id="card_cvv" name="card_cvv" placeholder="***" required>
                             </div>
                         </div>
                         
@@ -669,7 +670,7 @@ class CheckoutShortcode
     private function get_success_url(int $subscription_id): string
     {
         // Busca a página de área do cliente ou usa a página atual
-        $customer_area_page = $this->get_customer_area_page();
+        $customer_area_page = get_customer_area_page();
 
         return add_query_arg([
             'subscription_id' => $subscription_id,
@@ -677,25 +678,4 @@ class CheckoutShortcode
         ], $customer_area_page);
     }
 
-    /**
-     * Retorna a página Área do Usuário
-     *
-     */
-    private function get_customer_area_page(): string
-    {
-        global $wpdb;
-
-        $page_id = $wpdb->get_var(
-            "SELECT ID FROM {$wpdb->posts} 
-         WHERE post_content LIKE '%[upmkt_customer_area]%' 
-         AND post_status = 'publish' 
-         LIMIT 1"
-        );
-
-        if ($page_id) {
-            return get_permalink($page_id);
-        }
-
-        return home_url();
-    }
 }

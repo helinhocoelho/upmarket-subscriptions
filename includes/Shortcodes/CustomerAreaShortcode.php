@@ -21,7 +21,7 @@ class CustomerAreaShortcode
         add_action('wp_ajax_upmkt_cancel_subscription', [$this, 'cancel_subscription']);
         add_action('wp_ajax_upmkt_pause_subscription', [$this, 'pause_subscription']);
         add_action('wp_ajax_upmkt_resume_subscription', [$this, 'resume_subscription']);
-        //add_action('wp_ajax_nopriv_upmkt_process_login', [$this, 'process_login']);
+        add_action('wp_ajax_upmkt_retry_payment', [$this, 'retry_payment']);
     }
 
     /**
@@ -48,7 +48,7 @@ class CustomerAreaShortcode
             <?php if (empty($subscriptions)): ?>
                 <div class="upmkt-no-subscriptions">
                     <p>Você não possui assinaturas ativas.</p>
-                    <p><a href="<?php echo home_url('/planos'); ?>" class="button button-primary">Conhecer nossos planos</a></p>
+                    <p><a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="button button-primary">Conhecer nossos planos</a></p>
                 </div>
             <?php else: ?>
                 <div class="upmkt-subscriptions-list">
@@ -77,133 +77,171 @@ class CustomerAreaShortcode
         $is_paused = $subscription->is_paused();
         $is_cancelled = $status === 'cancelled';
         $is_expired = $status === 'expired';
+        $is_pending = $status === 'pending';
         $show_new_subscription_btn = $is_cancelled || $is_expired || ($is_paused && $next_billing <= $today);
         ?>
-        <div class="upmkt-subscription-card">
-            <div class="upmkt-subscription-header">
-                <div class="upmkt-subscription-title">
-                    <?php echo esc_html($plan_name); ?>
-                </div>
-                <div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($status); ?>">
-                    <?php echo esc_html($this->get_status_text($status)); ?>
-                </div>
-            </div>
-            
-            <div class="upmkt-subscription-details">
-                <div class="upmkt-detail-item">
-                    <strong>ID da Assinatura</strong>
-                    #<?php echo esc_html($subscription->get_id()); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Data de Início</strong>
-                    <?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Próxima Cobrança</strong>
-                    <?php echo esc_html($next_billing->format('d/m/Y')); ?>
-                </div>
-                
-                <div class="upmkt-detail-item">
-                    <strong>Valor</strong>
-                    R$ <?php echo esc_html(number_format($plan->get_price(), 2, ',', '.')); ?>
-                    <?php echo esc_html($this->get_billing_period_text($plan->get_billing_period())); ?>
-                </div>
-            </div>
+					<div class="upmkt-subscription-card">
+							<div class="upmkt-subscription-header">
+									<div class="upmkt-subscription-title">
+											<?php echo esc_html($plan_name); ?>
+									</div>
+									<div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($status); ?>">
+											<?php echo esc_html($this->get_status_text($status)); ?>
+									</div>
+							</div>
+							
+							<div class="upmkt-subscription-details">
+									<div class="upmkt-detail-item">
+											<strong>ID da Assinatura</strong>
+											#<?php echo esc_html($subscription->get_id()); ?>
+									</div>
+									
+									<div class="upmkt-detail-item">
+											<strong>Data de Início</strong>
+											<?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
+									</div>
+									
+									<?php if (!$is_pending): ?>
+									<div class="upmkt-detail-item">
+											<strong>Próxima Cobrança</strong>
+											<?php echo esc_html($next_billing->format('d/m/Y')); ?>
+									</div>
+									<?php endif; ?>
+									
+									<div class="upmkt-detail-item">
+											<strong>Valor</strong>
+											R$ <?php echo esc_html(number_format($plan->get_price(), 2, ',', '.')); ?>
+											<?php echo esc_html($this->get_billing_period_text($plan->get_billing_period())); ?>
+									</div>
+							</div>
 
-            <!-- Informações sobre recorrência -->
-            <?php if ($is_paused): ?>
-                <div class="upmkt-recurrence-info warning">
-                    <p><strong>⏸️ Recorrência Pausada</strong></p>
-                    <p>Você mantém o acesso até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
-                    <p>Após esta data, a assinatura será cancelada automaticamente.</p>
-                </div>
-            <?php elseif ($is_active): ?>
-                <div class="upmkt-recurrence-info">
-                    <p><strong>🔄 Recorrência Ativa</strong></p>
-                    <p>Próxima cobrança: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
-                </div>
-            <?php elseif ($is_cancelled): ?>
-                <div class="upmkt-recurrence-info danger">
-                    <p><strong>❌ Assinatura Cancelada</strong></p>
-                    <p>Seu acesso será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
-                </div>
-            <?php endif; ?>
+							<!-- Status Pendente: Pagamento Falhou -->
+							<?php if ($is_pending): ?>
+									<div class="upmkt-recurrence-info danger">
+											<p><strong>⚠️ Pagamento Pendente</strong></p>
+											<p>O pagamento inicial falhou. Você precisa concluir o pagamento para ativar sua assinatura.</p>
+											<p><strong>Motivo:</strong> Falha no processamento do pagamento. Verifique os dados do cartão e tente novamente.</p>
+									</div>
 
-            <!-- Informações sobre pagamento -->
-            <?php if ($is_active || $is_paused): ?>
-                <div class="upmkt-payment-info">
-                    <h4>💳 Informações de Pagamento</h4>
-                    <p>Seus dados de cartão são armazenados de forma <strong>segura e tokenizada</strong> pelo gateway de pagamento.</p>
-                    <p><strong>Para alterar o cartão:</strong> Cancele esta assinatura e crie uma nova com o novo cartão na página de planos.</p>
-                </div>
-            <?php endif; ?>
-            
-            <div class="upmkt-subscription-actions">
-                <?php if ($is_active): ?>
-                    <!-- Assinatura Ativa: Pode pausar ou cancelar -->
-                    <button class="upmkt-btn upmkt-btn-warning" 
-                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-                            data-action="upmkt_pause_subscription"
-                            onclick="upmktPauseSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-                        ⏸️ Pausar Recorrência
-                    </button>
-                    
-                    <button class="upmkt-btn upmkt-btn-danger" 
-                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-                            data-action="upmkt_cancel_subscription"
-                            onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-                        ❌ Cancelar Assinatura
-                    </button>
+							<!-- Status Ativo/Pausado/Cancelado (mantém o código original) -->
+							<?php elseif ($is_paused): ?>
+									<div class="upmkt-recurrence-info warning">
+											<p><strong>⏸️ Recorrência Pausada</strong></p>
+											<p>Você mantém o acesso até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+											<p>Após esta data, a assinatura será cancelada automaticamente.</p>
+									</div>
+							<?php elseif ($is_active): ?>
+									<div class="upmkt-recurrence-info">
+											<p><strong>🔄 Recorrência Ativa</strong></p>
+											<p>Próxima cobrança: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
+									</div>
+							<?php elseif ($is_cancelled): ?>
+									<div class="upmkt-recurrence-info danger">
+											<p><strong>❌ Assinatura Cancelada</strong></p>
+											<p>Seu acesso será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+									</div>
+							<?php endif; ?>
 
-                    <div class="upmkt-actions-info">
-                        <small>
-                            <strong>Pausar:</strong> Mantém acesso até o vencimento, sem novas cobranças. Após o vencimento, cancela automaticamente.<br>
-                            <strong>Cancelar:</strong> Encerra definitivamente na data de vencimento. Você pode criar uma nova assinatura a qualquer momento.
-                        </small>
-                    </div>
+							<!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
+							<?php if (($is_active || $is_paused) && !$is_pending): ?>
+									<div class="upmkt-payment-info">
+											<h4>💳 Informações de Pagamento</h4>
+											<p>Seus dados são armazenados de forma <strong>criptografada e segura</strong>.</p>
+											<p>Para alterar o cartão:</p>
+											<ul>
+												<li>Cancele a assinatura atual</li>
+												<li>Clique no botão "Assinar novamente"</li>
+												<li>Crie uma nova assinatura com o novo cartão</li>
+											</ul>
+									</div>
+							<?php endif; ?>
+							
+							<div class="upmkt-subscription-actions">
+									<?php if ($is_pending): ?>
+											<button class="upmkt-btn upmkt-btn-primary" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_retry_payment"
+															onclick="upmktRetryPayment(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Efeturar pagamento
+											</button>
+											
+											<button class="upmkt-btn upmkt-btn-danger" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_cancel_subscription"
+															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Cancelar
+											</button>
 
-                <?php elseif ($is_paused): ?>
-                    <!-- Assinatura Pausada: Pode retomar ou cancelar -->
-                    <button class="upmkt-btn upmkt-btn-success" 
-                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-                            data-action="upmkt_resume_subscription"
-                            onclick="upmktResumeSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-                        ▶️ Retomar Recorrência
-                    </button>
-                    
-                    <button class="upmkt-btn upmkt-btn-danger" 
-                            data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-                            data-action="upmkt_cancel_subscription"
-                            onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-                        ❌ Cancelar Definitivamente
-                    </button>
+											<div class="upmkt-actions-info">
+													<small>
+															<strong>Tentar Novamente:</strong> Reenvia o pagamento com os dados do cartão já cadastrados.<br>
+															<strong>Cancelar:</strong> Remove esta assinatura pendente do seu perfil.
+													</small>
+											</div>
 
-                    <div class="upmkt-actions-info">
-                        <small>Retome a recorrência para continuar com o plano após <?php echo esc_html($next_billing->format('d/m/Y')); ?>, ou cancele para encerrar definitivamente.</small>
-                    </div>
+									<?php elseif ($is_active): ?>
+											<!-- Código original para status ativo -->
+											<button class="upmkt-btn upmkt-btn-warning" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_pause_subscription"
+															onclick="upmktPauseSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Pausar recorrência
+											</button>
+											
+											<button class="upmkt-btn upmkt-btn-danger" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_cancel_subscription"
+															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Cancelar
+											</button>
 
-                <?php elseif ($is_cancelled && $next_billing > $today): ?>
-                    <!-- Assinatura Cancelada mas ainda ativa -->
-                    <div class="upmkt-actions-info">
-                        <small>Assinatura cancelada. Acesso mantido até <?php echo esc_html($next_billing->format('d/m/Y')); ?>.</small>
-                    </div>
+											<div class="upmkt-actions-info">
+													<small>
+															<strong>Pausar:</strong> Mantém acesso até o vencimento, sem novas cobranças. Após o vencimento, cancela automaticamente.<br>
+															<strong>Cancelar:</strong> Encerra definitivamente na data de vencimento. Você pode criar uma nova assinatura a qualquer momento.
+													</small>
+											</div>
 
-                <?php endif; ?>
+									<?php elseif ($is_paused): ?>
+											<!-- Código original para status pausado -->
+											<button class="upmkt-btn upmkt-btn-success" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_resume_subscription"
+															onclick="upmktResumeSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Retomar recorrência
+											</button>
+											
+											<button class="upmkt-btn upmkt-btn-danger" 
+															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+															data-action="upmkt_cancel_subscription"
+															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+													Cancelar
+											</button>
 
-                <!-- Botão para nova assinatura -->
-                <?php if ($show_new_subscription_btn): ?>
-                    <a href="<?php echo home_url('/planos'); ?>" class="upmkt-btn upmkt-btn-primary">
-                        📋 Assinar Novamente
-                    </a>
-                    <div class="upmkt-actions-info">
-                        <small>Crie uma nova assinatura para continuar aproveitando nossos serviços. Você pode escolher o mesmo plano ou experimentar outras opções.</small>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
+											<div class="upmkt-actions-info">
+													<small>Retome a recorrência para continuar com o plano após <?php echo esc_html($next_billing->format('d/m/Y')); ?>, ou cancele para encerrar definitivamente.</small>
+											</div>
+
+									<?php elseif ($is_cancelled && $next_billing > $today): ?>
+											<!-- Assinatura Cancelada mas ainda ativa -->
+											<div class="upmkt-actions-info">
+													<small>Assinatura cancelada. Acesso mantido até <?php echo esc_html($next_billing->format('d/m/Y')); ?>.</small>
+											</div>
+
+									<?php endif; ?>
+
+									<!-- Botão para nova assinatura -->
+									<?php if ($show_new_subscription_btn): ?>
+											<a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="upmkt-btn upmkt-btn-primary">
+													Assinar novamente
+											</a>
+											<div class="upmkt-actions-info">
+													<small>Crie uma nova assinatura para continuar aproveitando nossos serviços. Você pode escolher o mesmo plano ou experimentar outras opções.</small>
+											</div>
+									<?php endif; ?>
+							</div>
+					</div>
+				<?php
     }
 
     /**
@@ -499,6 +537,57 @@ class CustomerAreaShortcode
 
         } catch (\Exception $e) {
             Logger::instance()->error('Resume subscription error: ' . $e->getMessage(), 'customer_area');
+            wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Tenta pagamento novamente redirecionando para o checkout
+     */
+    public function retry_payment(): void
+    {
+        check_ajax_referer('upmkt_front_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(['message' => 'Usuário não logado']);
+            return;
+        }
+
+        $subscription_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
+        $user_id = get_current_user_id();
+
+        if (!$subscription_id) {
+            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            return;
+        }
+
+        try {
+            $subscription = new Subscription($subscription_id);
+
+            if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
+                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                return;
+            }
+
+            if ($subscription->get_status() !== 'pending') {
+                wp_send_json_error(['message' => 'Esta assinatura não está pendente de pagamento']);
+                return;
+            }
+
+            // Obtém o ID do plano da assinatura pendente
+            $plan_id = $subscription->get_plan_id();
+
+            // Obtém a URL do checkout com o plano
+            $checkout_page = get_checkout_page();
+            $redirect_url = add_query_arg(['plan_id' => $plan_id], $checkout_page);
+
+            wp_send_json_success([
+                'message' => 'Redirecionando para o checkout...',
+                'redirect_url' => $redirect_url
+            ]);
+
+        } catch (\Exception $e) {
+            Logger::instance()->error('Retry payment error: ' . $e->getMessage(), 'customer_area');
             wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
         }
     }

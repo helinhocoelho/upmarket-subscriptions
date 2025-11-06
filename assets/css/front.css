@@ -76,7 +76,7 @@
 
 /* Checkout Styles - Compactado */
 .upmkt-checkout {
-  max-width: 500px;
+  max-width: 780px;
   margin: 0 auto;
   padding: var(--spacing-lg);
 }
@@ -707,6 +707,127 @@
   margin-top: var(--spacing-base);
 }
 
+/* Estilos para as guias/tabs */
+.upmkt-form-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gray-300);
+  margin-bottom: var(--spacing-lg);
+  background: var(--gray-50);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.upmkt-tab {
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-base);
+  text-align: center;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gray-600);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-base);
+}
+
+.upmkt-tab:hover {
+  color: var(--primary-color);
+  background: var(--gray-100);
+}
+
+.upmkt-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: white;
+}
+
+/* Conteúdo das tabs */
+.upmkt-tab-content {
+  display: none;
+}
+
+.upmkt-tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilo para os radio buttons do tipo de documento */
+.upmkt-document-type {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-xs);
+}
+
+.upmkt-document-type label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: normal;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.upmkt-document-type input[type="radio"] {
+  width: auto;
+  margin: 0;
+}
+
+/* Estilo para os termos */
+.upmkt-terms {
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-200);
+}
+
+.upmkt-terms label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+
+.upmkt-terms input[type="checkbox"] {
+  width: auto;
+  margin-top: 0.2em;
+}
+
+.upmkt-terms-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.upmkt-terms-text a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.upmkt-terms-text a:hover {
+  text-decoration: underline;
+}
+
+/* Ações do formulário */
+.upmkt-form-actions {
+  margin-top: var(--spacing-lg);
+}
+
+.upmkt-messages {
+  margin-top: var(--spacing-base);
+  min-height: 20px;
+}
+
 /* Responsividade do login */
 @media (max-width: 480px) {
   .upmkt-login-required {
@@ -807,4 +928,52 @@
   .upmkt-checkout-success {
     padding: var(--spacing-lg);
   }
+}
+
+/* Estilos para erros de validação do checkout */
+.upmkt-input-error {
+  border-color: var(--danger-color) !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+}
+
+.upmkt-field-error {
+  color: var(--danger-color);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-xs);
+  display: block;
+  font-weight: 500;
+}
+
+.upmkt-payment-method input[type="radio"]:checked + label {
+  background: var(--primary-light);
+  border-color: var(--primary-color);
+}
+
+/* Melhorar a aparência dos métodos de pagamento */
+.upmkt-payment-method {
+  margin-bottom: var(--spacing-base);
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  transition: all 0.2s ease;
+}
+
+.upmkt-payment-method:hover {
+  border-color: var(--primary-color);
+}
+
+.upmkt-payment-method input[type="radio"] {
+  margin-right: var(--spacing-sm);
+}
+
+.upmkt-payment-method label {
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.upmkt-payment-details {
+  margin-top: var(--spacing-base);
+  padding-top: var(--spacing-base);
+  border-top: 1px solid var(--gray-200);
 }

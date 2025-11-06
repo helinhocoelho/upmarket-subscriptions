@@ -56,3 +56,58 @@ function upmkt_generate_csv_filename(): string
 
     return sprintf('assinaturas_%s%s%s_%sh%s.csv', $dia, $mes, $ano, $hora, $minuto);
 }
+
+
+/**
+ * Retorna a página Planos com parâmetros opcionais
+ *
+ * @param string $anchor Âncora para adicionar à URL
+ * @return string
+ */
+function get_plans_page(string $anchor = ''): string
+{
+    $plans_page_id = get_option('upmkt_plans_page_id');
+
+    if ($plans_page_id && get_post_status($plans_page_id) === 'publish') {
+        $url = get_permalink($plans_page_id);
+
+        if (!empty($anchor)) {
+            $anchor = ltrim($anchor, '#');
+            $url .= '#' . $anchor;
+        }
+
+        return $url;
+    }
+
+    return home_url();
+}
+
+/**
+ * Retorna a página Pagamento
+ *
+ */
+function get_checkout_page(): string
+{
+    $checkout_page_id = get_option('upmkt_checkout_page_id');
+
+    if ($checkout_page_id && get_post_status($checkout_page_id) === 'publish') {
+        return get_permalink($checkout_page_id);
+    }
+
+    return home_url();
+}
+
+/**
+ * Retorna a página Minha Área
+ *
+ */
+function get_customer_area_page(): string
+{
+    $customer_area_page_id = get_option('upmkt_customer_area_page_id');
+
+    if ($customer_area_page_id && get_post_status($customer_area_page_id) === 'publish') {
+        return get_permalink($customer_area_page_id);
+    }
+
+    return home_url();
+}
