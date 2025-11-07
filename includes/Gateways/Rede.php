@@ -128,7 +128,7 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * Cancela uma assinatura no gateway
+     * Cancela uma doação no gateway
          * Transações futuras não serão processadas
      */
     public function cancel_subscription(SubscriptionInterface $subscription): bool
@@ -393,7 +393,7 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * Obtém valor da assinatura
+     * Obtém valor da doação
      */
     private function get_subscription_amount(SubscriptionInterface $subscription): float
     {
@@ -617,11 +617,11 @@ class Rede extends AbstractPaymentGateway
      */
 
     /**
-     * CORREÇÃO: Verificação de assinatura com headers dinâmicos
+     * CORREÇÃO: Verificação de doação com headers dinâmicos
      */
     private function verify_webhook_signature(array $headers = []): bool
     {
-        // TODO: Implementar verificação de assinatura se necessário
+        // TODO: Implementar verificação de doação se necessário
         // Agora recebe headers do sistema dinâmico
         Logger::instance()->info("Webhook signature verification for Rede", 'webhooks');
         return true;

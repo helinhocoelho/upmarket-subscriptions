@@ -44,7 +44,7 @@
         this.handleTestConnection.bind(this)
       );
 
-      // Cancelar assinatura
+      // Cancelar doação
       $(document).on(
         "click",
         ".upmkt-cancel-subscription",
@@ -160,7 +160,7 @@
       if (
         !confirm(
           upmkt_admin?.i18n?.confirm_cancel ||
-            "Tem certeza que deseja cancelar esta assinatura?"
+            "Tem certeza que deseja cancelar esta doação?"
         )
       ) {
         return;
@@ -184,7 +184,7 @@
             $button.closest("tr").fadeOut();
           } else {
             this.showNotice(
-              response.data?.message || "Erro ao cancelar assinatura",
+              response.data?.message || "Erro ao cancelar doação",
               "error"
             );
             $button.prop("disabled", false).text("Cancelar");

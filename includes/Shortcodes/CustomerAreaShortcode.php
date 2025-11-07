@@ -46,11 +46,11 @@ class CustomerAreaShortcode
         ob_start();
         ?>
         <div class="upmkt-customer-area">
-            <h2>Minhas Doações</h2>
+            <h3>Minhas Doações</h3>
             
             <?php if (empty($subscriptions)): ?>
                 <div class="upmkt-no-subscriptions">
-                    <p>Você não possui doações recorrentes ativas.</p>
+                    <p>Você não possui doações ativas.</p>
                     <p><a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="button button-primary">Conhecer nossos planos de doação</a></p>
                 </div>
             <?php else: ?>
@@ -64,7 +64,7 @@ class CustomerAreaShortcode
                 <?php if ($show_global_resubscribe_btn): ?>
                     <div class="upmkt-global-resubscribe">
                         <div class="upmkt-resubscribe-content">
-                            <h3>Quer fazer uma doação novamente?</h3>
+                            <h5>Quer fazer uma doação novamente?</h5>
                             <a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="upmkt-btn upmkt-btn-primary upmkt-btn-large">
                                 Doar novamente
                             </a>
@@ -169,36 +169,36 @@ class CustomerAreaShortcode
             <!-- Status Pendente: Pagamento Falhou -->
             <?php if ($is_pending): ?>
                 <div class="upmkt-recurrence-info danger">
-                    <p><strong>⚠️ Doação Pendente</strong></p>
-                    <p>O pagamento inicial falhou. Você precisa concluir o pagamento para ativar sua doação recorrente.</p>
-                    <p><strong>Motivo:</strong> Falha no processamento do pagamento. Verifique os dados do cartão e tente novamente.</p>
+                    <h6><i class="fas fa-exclamation-triangle"></i> Doação Pendente</h6>
+                    O pagamento inicial falhou. Você precisa concluir o pagamento para ativar sua doação.<br>
+                    <strong>Motivo:</strong> Falha no processamento do pagamento. Verifique os dados do cartão e tente novamente.
                 </div>
 
             <!-- Status Ativo/Pausado/Cancelado (mantém o código original) -->
             <?php elseif ($is_paused): ?>
                 <div class="upmkt-recurrence-info warning">
-                    <p><strong>⏸️ Doação Pausada</strong></p>
-                    <p>Você mantém o status de doador até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
-                    <p>Após esta data, a doação recorrente será cancelada automaticamente.</p>
+                    <h6><i class="fas fa-pause"></i> Doação Pausada</h6>
+                    Você mantém o status de doador até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.<br>
+                    Após esta data, a doação recorrente será cancelada automaticamente.<br>
                 </div>
             <?php elseif ($is_active): ?>
                 <div class="upmkt-recurrence-info">
-                    <p><strong>🔄 Doação Ativa</strong></p>
-                    <p>Próxima doação: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
+                    <strong><i class="fas fa-sync-alt"></i> Doação Ativa</strong><br>
+                    Próxima doação: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>
                 </div>
             <?php elseif ($is_cancelled): ?>
                 <div class="upmkt-recurrence-info danger">
-                    <p><strong>❌ Doação Cancelada</strong></p>
-                    <p>Seu status de doador será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+                    <strong><i class="fas fa-times-circle"></i> Doação Cancelada</strong><br>
+                    Seu status de doador será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.
                 </div>
             <?php endif; ?>
 
             <!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
             <?php if (($is_active || $is_paused) && !$is_pending): ?>
                 <div class="upmkt-payment-info">
-                    <h4>💳 Informações de Pagamento</h4>
-                    <p>Seus dados são armazenados de forma <strong>criptografada e segura</strong>.</p>
-                    <p>Para alterar o cartão:</p>
+                    <h6><i class="fas fa-credit-card"></i> Informações de Pagamento</h6>
+                    Seus dados são armazenados de forma <strong>criptografada e segura</strong>.<br>
+                    Para alterar o cartão:
                     <ul>
                         <li>Cancele a doação atual</li>
                         <li>Clique no botão "Doar novamente"</li>
@@ -287,7 +287,7 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Retorna doações recorrentes do usuário
+     * Retorna doações do usuário
      */
     private function get_user_subscriptions(int $user_id): array
     {
@@ -358,23 +358,23 @@ class CustomerAreaShortcode
                 </svg>
             </div>
             
-            <h2>Doação Recorrente Criada com Sucesso!</h2>
+            <h3>Doação criada com sucesso!</h3>
             
             <div class="upmkt-success-message">
-                <p>Sua doação recorrente foi criada e ativada com sucesso.</p>
+                <p>Sua doação foi criada e ativada com sucesso.</p>
                 
                 <?php if ($subscription_id): ?>
                     <p><strong>ID da Doação:</strong> #<?php echo esc_html($subscription_id); ?></p>
                 <?php endif; ?>
                 
                 <p>Você receberá um e-mail de confirmação em breve.</p>
-                <p>Acesse sua <strong>Área do Doador</strong> para gerenciar sua doação recorrente.</p>
+                <p>Acesse a área do usuário para gerenciar sua doação.</p>
             </div>
             
             <div class="upmkt-success-actions">
                 <a href="<?php echo esc_url(remove_query_arg(['upmkt_checkout', 'subscription_id'])); ?>" 
                    class="upmkt-btn upmkt-btn-primary">
-                    👤 Ir para Minha Área
+                    VER MINHA ÁREA
                 </a>
             </div>
         </div>
@@ -392,7 +392,7 @@ class CustomerAreaShortcode
                     <div class="upmkt-login-required">
                             <div class="upmkt-login-container">
                                     <h3>Acesse sua conta</h3>
-                                    <p>Faça login para gerenciar suas doações recorrentes.</p>
+                                    <p>Faça login para gerenciar suas doações.</p>
                                     
                                     <!-- FORMULÁRIO PADRÃO WORDPRESS COM CLASSES PERSONALIZADAS -->
                                     <form name="upmkt-login-form" id="upmkt-login-form" class="upmkt-login-form" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">

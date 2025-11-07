@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Entities\Subscription;
 use UPMarket\Subscriptions\Entities\SubscriptionPlan;
 
 /**
- * Gerencia a edição de assinaturas
+ * Gerencia a edição de doações
  *
  * @package UPMarket\Subscriptions\Admin
  */
@@ -21,7 +21,7 @@ class SubscriptionEdit
     }
 
     /**
-     * Manipula ações de assinatura
+     * Manipula ações de doação
      */
     public function handle_subscription_actions(): void
     {
@@ -47,7 +47,7 @@ class SubscriptionEdit
         $subscription = new Subscription($subscription_id);
 
         if (!$subscription->exists()) {
-            wp_die('Assinatura não encontrada.');
+            wp_die('Doação não encontrada.');
         }
 
         switch ($action) {
@@ -82,7 +82,7 @@ class SubscriptionEdit
         $subscription = new Subscription($subscription_id);
 
         if (!$subscription->exists()) {
-            wp_die('Assinatura não encontrada.');
+            wp_die('Doação não encontrada.');
         }
 
 
@@ -92,7 +92,7 @@ class SubscriptionEdit
 
         ?>
 					<div class="wrap upmkt-admin">
-							<h1 class="wp-heading-inline">Editar Assinatura #<?php echo esc_html($subscription->get_id()); ?></h1>
+							<h1 class="wp-heading-inline">Editar Doação #<?php echo esc_html($subscription->get_id()); ?></h1>
 							<a href="<?php echo esc_url(admin_url('admin.php?page=upmkt-subscriptions-list')); ?>" class="page-title-action">
 									← Voltar para Lista
 							</a>
@@ -107,7 +107,7 @@ class SubscriptionEdit
 													<?php wp_nonce_field('update_subscription_' . $subscription->get_id(), 'upmkt_subscription_nonce'); ?>
 													
 													<div class="upmkt-card">
-															<h2>Informações Básicas</h2>
+															<h3>Informações Básicas</h3>
 															
 															<table class="form-table">
 																	<tbody>
@@ -146,7 +146,7 @@ class SubscriptionEdit
 																											</option>
 																									<?php endforeach; ?>
 																							</select>
-																							<p class="description">Alterar o plano atualiza o valor e características da assinatura.</p>
+																							<p class="description">Alterar o plano atualiza o valor e características da doação.</p>
 																					</td>
 																			</tr>
 																			
@@ -167,7 +167,7 @@ class SubscriptionEdit
 													</div>
 
 													<div class="upmkt-card">
-															<h2>Datas e Ciclo</h2>
+															<h3>Datas e Ciclo</h3>
 															
 															<table class="form-table">
 																	<tbody>
@@ -214,7 +214,7 @@ class SubscriptionEdit
 													</div>
 
 													<div class="upmkt-card">
-															<h2>Metadados Avançados</h2>
+															<h3>Metadados Avançados</h3>
 															
 															<table class="form-table">
 																	<tbody>
@@ -226,7 +226,7 @@ class SubscriptionEdit
 																										name="gateway_subscription_id" 
 																										value="<?php echo esc_attr($subscription->get_meta('gateway_subscription_id')); ?>" 
 																										class="regular-text">
-																							<p class="description">ID da assinatura no gateway de pagamento.</p>
+																							<p class="description">ID da doação no gateway de pagamento.</p>
 																					</td>
 																			</tr>
 																			
@@ -256,7 +256,7 @@ class SubscriptionEdit
 													</div>
 
 													<div class="upmkt-actions">
-															<?php submit_button('Atualizar Assinatura', 'primary', 'update_subscription'); ?>
+															<?php submit_button('Atualizar Doação', 'primary', 'update_subscription'); ?>
 															
 															<div class="upmkt-danger-actions">
 																	<?php if ($subscription->get_status() !== 'cancelled'): ?>
@@ -265,8 +265,8 @@ class SubscriptionEdit
 																			    'cancel_subscription_' . $subscription->get_id()
 																			)); ?>" 
 																				class="button button-link-delete" 
-																				onclick="return confirm('Tem certeza que deseja cancelar esta assinatura?')">
-																					Cancelar Assinatura
+																				onclick="return confirm('Tem certeza que deseja cancelar esta doação?')">
+																					Cancelar Doação
 																			</a>
 																	<?php endif; ?>
 
@@ -276,7 +276,7 @@ class SubscriptionEdit
 																	)); ?>" 
 																		class="button button-link-delete" 
 																		style="color:#a00;"
-																		onclick="return confirm('Tem certeza que deseja EXCLUIR permanentemente esta assinatura? Esta ação não pode ser desfeita.')">
+																		onclick="return confirm('Tem certeza que deseja EXCLUIR permanentemente esta doação? Esta ação não pode ser desfeita.')">
 																			Excluir Permanentemente
 																	</a>
 															</div>
@@ -341,7 +341,7 @@ class SubscriptionEdit
     }
 
     /**
-     * Renderiza resumo da assinatura
+     * Renderiza resumo da doação
      */
     private function render_subscription_summary(Subscription $subscription): void
     {
@@ -349,7 +349,7 @@ class SubscriptionEdit
         $plan = new SubscriptionPlan($subscription->get_plan_id());
         ?>
 					<div class="upmkt-card">
-							<h3>Resumo da Assinatura</h3>
+							<h3>Resumo da Doação</h3>
 							
 							<div class="upmkt-summary-item">
 									<strong>Usuário:</strong><br>
@@ -414,7 +414,7 @@ class SubscriptionEdit
                         'cancel_subscription_' . $subscription->get_id()
                     )); ?>" 
                        class="button" style="width:100%; margin-bottom:5px; color:#dd3a49; background:#ffb3b3; border-color:#dd3a49;"
-                       onclick="return confirm('Cancelar esta assinatura?')">
+                       onclick="return confirm('Cancelar esta doação?')">
                        🚫 Cancelar
                     </a>
                 <?php endif; ?>
@@ -465,7 +465,7 @@ class SubscriptionEdit
     }
 
     /**
-     * Obtém atividade da assinatura
+     * Obtém atividade da doação
      */
     private function get_subscription_activity(int $subscription_id): array
     {
@@ -490,7 +490,7 @@ class SubscriptionEdit
     }
 
     /**
-     * Manipula atualização da assinatura
+     * Manipula atualização da doação
      */
     private function handle_update_subscription(Subscription $subscription): void
     {
@@ -521,7 +521,7 @@ class SubscriptionEdit
             if ($subscription->save()) {
                 $this->log_activity(
                     $subscription->get_id(),
-                    'Assinatura atualizada pelo administrador',
+                    'Doação atualizada pelo administrador',
                     [
                         'admin_id' => get_current_user_id(),
                         'changes' => $_POST
@@ -533,11 +533,11 @@ class SubscriptionEdit
                 ));
                 exit;
             } else {
-                throw new \Exception('Erro ao salvar assinatura.');
+                throw new \Exception('Erro ao salvar doação.');
             }
 
         } catch (\Exception $e) {
-            wp_die('Erro ao atualizar assinatura: ' . $e->getMessage());
+            wp_die('Erro ao atualizar doação: ' . $e->getMessage());
         }
     }
 
@@ -552,7 +552,7 @@ class SubscriptionEdit
 
                 $this->log_activity(
                     $subscription->get_id(),
-                    'Assinatura cancelada pelo administrador',
+                    'Doação cancelada pelo administrador',
                     ['admin_id' => get_current_user_id()]
                 );
 
@@ -562,7 +562,7 @@ class SubscriptionEdit
                 exit;
             }
         } catch (\Exception $e) {
-            wp_die('Erro ao cancelar assinatura: ' . $e->getMessage());
+            wp_die('Erro ao cancelar doação: ' . $e->getMessage());
         }
     }
 
@@ -577,7 +577,7 @@ class SubscriptionEdit
 
                 $this->log_activity(
                     $subscription->get_id(),
-                    'Assinatura retomada pelo administrador',
+                    'Doação retomada pelo administrador',
                     ['admin_id' => get_current_user_id()]
                 );
 
@@ -587,7 +587,7 @@ class SubscriptionEdit
                 exit;
             }
         } catch (\Exception $e) {
-            wp_die('Erro ao retomar assinatura: ' . $e->getMessage());
+            wp_die('Erro ao retomar doação: ' . $e->getMessage());
         }
     }
 
@@ -604,11 +604,11 @@ class SubscriptionEdit
             // Registrar log antes de excluir
             $this->log_activity(
                 $subscription_id,
-                'Assinatura excluída permanentemente pelo administrador',
+                'Doação excluída permanentemente pelo administrador',
                 ['admin_id' => get_current_user_id()]
             );
 
-            // Excluir assinatura
+            // Excluir doação
             $deleted = $wpdb->delete(
                 $wpdb->prefix . 'upmkt_subscriptions',
                 ['id' => $subscription_id],
@@ -628,11 +628,11 @@ class SubscriptionEdit
                 ));
                 exit;
             } else {
-                throw new \Exception('Erro ao excluir assinatura do banco de dados.');
+                throw new \Exception('Erro ao excluir doação do banco de dados.');
             }
 
         } catch (\Exception $e) {
-            wp_die('Erro ao excluir assinatura: ' . $e->getMessage());
+            wp_die('Erro ao excluir doação: ' . $e->getMessage());
         }
     }
 
@@ -697,10 +697,10 @@ class SubscriptionEdit
     {
         if (isset($_GET['message'])) {
             $messages = [
-                'updated' => 'Assinatura atualizada com sucesso!',
-                'cancelled' => 'Assinatura cancelada com sucesso!',
-                'resumed' => 'Assinatura retomada com sucesso!',
-                'deleted' => 'Assinatura excluída com sucesso!'
+                'updated' => 'Doação atualizada com sucesso!',
+                'cancelled' => 'Doação cancelada com sucesso!',
+                'resumed' => 'Doação retomada com sucesso!',
+                'deleted' => 'Doação excluída com sucesso!'
             ];
 
             $message = $messages[$_GET['message']] ?? 'Ação realizada com sucesso!';

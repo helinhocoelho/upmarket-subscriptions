@@ -5,7 +5,7 @@ namespace UPMarket\Subscriptions\Abstracts;
 use UPMarket\Subscriptions\Interfaces\SubscriptionPlanInterface;
 
 /**
- * Classe abstrata para planos de assinatura
+ * Classe abstrata para planos de doação
  *
  * @package UPMarket\Subscriptions\Abstracts
  */

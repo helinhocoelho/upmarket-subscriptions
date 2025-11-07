@@ -15,7 +15,7 @@ interface PaymentGatewayInterface
      * Processa um pagamento inicial
      *
      * @param array $payment_data Dados do pagamento
-     * @param SubscriptionInterface $subscription Assinatura
+     * @param SubscriptionInterface $subscription Doação
      * @return array
      */
     public function process_initial_payment(array $payment_data, SubscriptionInterface $subscription): array;
@@ -23,15 +23,15 @@ interface PaymentGatewayInterface
     /**
      * Processa um pagamento recorrente
      *
-     * @param SubscriptionInterface $subscription Assinatura
+     * @param SubscriptionInterface $subscription Doação
      * @return array
      */
     public function process_recurring_payment(SubscriptionInterface $subscription): array;
 
     /**
-     * Cancela uma assinatura no gateway
+     * Cancela uma doação no gateway
      *
-     * @param SubscriptionInterface $subscription Assinatura
+     * @param SubscriptionInterface $subscription Doação
      * @return bool
      */
     public function cancel_subscription(SubscriptionInterface $subscription): bool;

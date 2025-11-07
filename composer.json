@@ -1,6 +1,6 @@
 {
   "name": "upmarket/subscriptions",
-  "description": "Sistema de assinaturas recorrentes para WordPress",
+  "description": "Sistema de doações recorrentes para WordPress",
   "type": "wordpress-plugin",
   "require": {
     "php": ">=7.4",

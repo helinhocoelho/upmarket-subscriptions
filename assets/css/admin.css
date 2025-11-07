@@ -145,7 +145,7 @@
 
 /* Admin actions */
 .upmkt-admin-actions {
-  position: absolute;
+  position: relative;
   margin: 20px 0;
 }
 

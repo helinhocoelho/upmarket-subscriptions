@@ -5,7 +5,7 @@ namespace UPMarket\Subscriptions\Abstracts;
 use UPMarket\Subscriptions\Interfaces\SubscriptionInterface;
 
 /**
- * Classe abstrata para assinaturas
+ * Classe abstrata para doações
  *
  * @package UPMarket\Subscriptions\Abstracts
  */
@@ -31,7 +31,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     protected $plan_id = 0;
 
     /**
-     * @var string Status da assinatura
+     * @var string Status da doação
      */
     protected $status = self::STATUS_PENDING;
 
@@ -78,7 +78,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Retorna o status da assinatura
+     * Retorna o status da doação
      *
      * @return string
      */
@@ -88,7 +88,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Define o status da assinatura
+     * Define o status da doação
      *
      * @param string $status
      * @return bool
@@ -132,7 +132,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Verifica se a assinatura está ativa
+     * Verifica se a doação está ativa
      *
      * @return bool
      */
@@ -142,7 +142,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Verifica se a assinatura está pausada
+     * Verifica se a doação está pausada
      *
      * @return bool
      */
@@ -152,7 +152,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Cancela a assinatura
+     * Cancela a doação
      *
      * @return bool
      */
@@ -162,7 +162,7 @@ abstract class AbstractSubscription extends BaseEntity implements SubscriptionIn
     }
 
     /**
-     * Retoma a assinatura
+     * Retoma a doação
      *
      * @return bool
      */

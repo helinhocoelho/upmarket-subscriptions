@@ -7,7 +7,7 @@ use UPMarket\Subscriptions\Core\GatewayManager;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Gerenciador principal de assinaturas
+ * Gerenciador principal de doações
  *
  * @package UPMarket\Subscriptions\Services
  */
@@ -32,7 +32,7 @@ class SubscriptionManager
      */
     private function init_hooks(): void
     {
-        // Hook para processar assinaturas diariamente
+        // Hook para processar doações diariamente
         add_action('upmkt_daily_subscription_check', [$this, 'process_daily_subscriptions']);
 
         // Hook para retentativa de pagamentos
@@ -43,7 +43,7 @@ class SubscriptionManager
     }
 
     /**
-     * Cria uma nova assinatura
+     * Cria uma nova doação
      *
      * @param int $user_id
      * @param int $plan_id
@@ -82,7 +82,7 @@ class SubscriptionManager
         }
 
         try {
-            // Cria a assinatura com status pending
+            // Cria a doação com status pending
             $subscription = Subscription::create($user_id, $plan_id, [
                 'start_date' => current_time('mysql'),
                 'next_billing_date' => $this->calculate_next_billing_date($plan),
@@ -114,7 +114,7 @@ class SubscriptionManager
             $payment_result = $gateway->process_initial_payment($payment_data, $subscription);
 
             if ($payment_result['success']) {
-                // Atualiza assinatura para ativa
+                // Atualiza doação para ativa
                 $subscription->set_status(Subscription::STATUS_ACTIVE);
                 $subscription->set_meta('initial_transaction_id', $payment_result['transaction_id']);
                 $subscription->save();
@@ -124,7 +124,7 @@ class SubscriptionManager
                 return [
                     'success' => true,
                     'subscription_id' => $subscription->get_id(),
-                    'message' => 'Assinatura criada com sucesso'
+                    'message' => 'Doação criada com sucesso'
                 ];
             } else {
                 // Falha no pagamento - mantém como pending
@@ -143,7 +143,7 @@ class SubscriptionManager
 
             return [
                 'success' => false,
-                'errors' => ['Erro ao criar assinatura: ' . $e->getMessage()]
+                'errors' => ['Erro ao criar doação: ' . $e->getMessage()]
             ];
         }
     }
@@ -247,14 +247,14 @@ class SubscriptionManager
             if ($retry_count < $max_retries) {
                 $this->process_recurring_payment($subscription);
             } else {
-                // Cancela assinatura após max retries
+                // Cancela doação após max retries
                 $this->cancel_subscription($subscription, 'payment_failure');
             }
         }
     }
 
     /**
-     * Cancela uma assinatura
+     * Cancela uma doação
      *
      * @param Subscription $subscription
      * @param string $reason
@@ -293,7 +293,7 @@ class SubscriptionManager
     }
 
     /**
-     * Retorna assinaturas com cobrança pendente
+     * Retorna doações com cobrança pendente
      *
      * @return array
      */
@@ -326,7 +326,7 @@ class SubscriptionManager
     }
 
     /**
-     * Retorna assinaturas com falhas de pagamento
+     * Retorna doações com falhas de pagamento
      *
      * @return array
      */
@@ -393,7 +393,7 @@ class SubscriptionManager
     }
 
     /**
-     * Pausa uma assinatura
+     * Pausa uma doação
      *
      * @param Subscription $subscription
      * @param string $reason
@@ -404,9 +404,9 @@ class SubscriptionManager
         Logger::instance()->info("Pausing subscription {$subscription->get_id()}, reason: {$reason}", 'subscriptions');
 
         try {
-            // Verificar se a assinatura pode ser pausada
+            // Verificar se a doação pode ser pausada
             if (!$subscription->is_active()) {
-                throw new \Exception('Apenas assinaturas ativas podem ser pausadas.');
+                throw new \Exception('Apenas doações ativas podem ser pausadas.');
             }
 
             // Salvar a próxima data de cobrança original para quando for retomada
@@ -433,7 +433,7 @@ class SubscriptionManager
     }
 
     /**
-     * Retoma uma assinatura pausada
+     * Retoma uma doação pausada
      *
      * @param Subscription $subscription
      * @param string $reason
@@ -444,9 +444,9 @@ class SubscriptionManager
         Logger::instance()->info("Resuming subscription {$subscription->get_id()}, reason: {$reason}", 'subscriptions');
 
         try {
-            // Verificar se a assinatura pode ser retomada
+            // Verificar se a doação pode ser retomada
             if (!$subscription->is_paused()) {
-                throw new \Exception('Apenas assinaturas pausadas podem ser retomadas.');
+                throw new \Exception('Apenas doações pausadas podem ser retomadas.');
             }
 
             // Restaurar a próxima data de cobrança original

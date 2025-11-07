@@ -3,14 +3,14 @@
 namespace UPMarket\Subscriptions\Interfaces;
 
 /**
- * Interface para entidades de Assinatura
+ * Interface para entidades de Doação
  *
  * @package UPMarket\Subscriptions\Interfaces
  */
 interface SubscriptionInterface
 {
     /**
-     * Retorna o ID da assinatura
+     * Retorna o ID da doação
      *
      * @return int
      */
@@ -31,14 +31,14 @@ interface SubscriptionInterface
     public function get_plan_id(): int;
 
     /**
-     * Retorna o status da assinatura
+     * Retorna o status da doação
      *
      * @return string
      */
     public function get_status(): string;
 
     /**
-     * Define o status da assinatura
+     * Define o status da doação
      *
      * @param string $status
      * @return bool
@@ -60,21 +60,21 @@ interface SubscriptionInterface
     public function get_next_billing_date(): \DateTime;
 
     /**
-     * Verifica se a assinatura está ativa
+     * Verifica se a doação está ativa
      *
      * @return bool
      */
     public function is_active(): bool;
 
     /**
-     * Cancela a assinatura
+     * Cancela a doação
      *
      * @return bool
      */
     public function cancel(): bool;
 
     /**
-     * Retoma a assinatura
+     * Retoma a doação
      *
      * @return bool
      */

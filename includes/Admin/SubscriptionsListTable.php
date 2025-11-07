@@ -7,7 +7,7 @@ if (!class_exists('WP_List_Table')) {
 }
 
 /**
- * List table para assinaturas (versão completa)
+ * List table para doações (versão completa)
  */
 class SubscriptionsListTable extends \WP_List_Table
 {
@@ -17,8 +17,8 @@ class SubscriptionsListTable extends \WP_List_Table
     public function __construct()
     {
         parent::__construct([
-            'singular' => 'assinatura',
-            'plural' => 'assinaturas',
+            'singular' => 'doação',
+            'plural' => 'doações',
             'ajax' => false
         ]);
     }
@@ -264,14 +264,14 @@ class SubscriptionsListTable extends \WP_List_Table
 
         // Ação Editar sempre disponível
         $actions['edit'] = sprintf(
-            '<a href="%s" title="Editar assinatura">Editar</a>',
+            '<a href="%s" title="Editar doação">Editar</a>',
             admin_url('admin.php?page=upmkt-subscriptions-list&action=edit&subscription_id=' . $item->id)
         );
 
         // Ações baseadas no status
         if ($item->status !== 'cancelled') {
             $actions['cancel'] = sprintf(
-                '<a href="%s" title="Cancelar assinatura" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja cancelar esta assinatura?\')">Cancelar</a>',
+                '<a href="%s" title="Cancelar doação" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja cancelar esta doação?\')">Cancelar</a>',
                 wp_nonce_url(
                     admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $item->id),
                     'cancel_subscription_' . $item->id
@@ -280,7 +280,7 @@ class SubscriptionsListTable extends \WP_List_Table
         }
 
         $actions['delete'] = sprintf(
-            '<a href="%s" title="Excluir permanentemente" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja EXCLUIR permanentemente esta assinatura?\')">Excluir</a>',
+            '<a href="%s" title="Excluir permanentemente" style="color:#a00;" onclick="return confirm(\'Tem certeza que deseja EXCLUIR permanentemente esta doação?\')">Excluir</a>',
             wp_nonce_url(
                 admin_url('admin.php?page=upmkt-subscriptions-list&action=delete&subscription_id=' . $item->id),
                 'delete_subscription_' . $item->id
@@ -372,7 +372,7 @@ class SubscriptionsListTable extends \WP_List_Table
      */
     public function no_items(): void
     {
-        echo 'Nenhuma assinatura encontrada.';
+        echo 'Nenhuma doação encontrada.';
     }
 
     /**
@@ -451,7 +451,7 @@ class SubscriptionsListTable extends \WP_List_Table
                 ];
 
                 echo '<div class="notice notice-success is-dismissible"><p>' .
-                     sprintf('%d assinatura(s) %s com sucesso.', $results['success'], $action_text[$action]) .
+                     sprintf('%d doação(s) %s com sucesso.', $results['success'], $action_text[$action]) .
                      '</p></div>';
             });
         }
@@ -459,14 +459,14 @@ class SubscriptionsListTable extends \WP_List_Table
         if ($results['error'] > 0) {
             add_action('admin_notices', function () use ($results) {
                 echo '<div class="notice notice-error is-dismissible"><p>' .
-                     sprintf('Erro ao processar %d assinatura(s).', $results['error']) .
+                     sprintf('Erro ao processar %d doação(s).', $results['error']) .
                      '</p></div>';
             });
         }
     }
 
     /**
-     * Exclui uma assinatura
+     * Exclui uma doação
      */
     private function delete_subscription(int $subscription_id): void
     {
@@ -487,16 +487,16 @@ class SubscriptionsListTable extends \WP_List_Table
     }
 
     /**
-     * Renderiza notificações para assinaturas
+     * Renderiza notificações para doações
      */
     private function render_subscriptions_admin_notices(): void
     {
         if (isset($_GET['message'])) {
             $messages = [
-                'updated' => 'Assinatura atualizada com sucesso!',
-                'cancelled' => 'Assinatura cancelada com sucesso!',
-                'resumed' => 'Assinatura retomada com sucesso!',
-                'deleted' => 'Assinatura excluída com sucesso!'
+                'updated' => 'Doação atualizada com sucesso!',
+                'cancelled' => 'Doação cancelada com sucesso!',
+                'resumed' => 'Doação retomada com sucesso!',
+                'deleted' => 'Doação excluída com sucesso!'
             ];
 
             $message = $messages[$_GET['message']] ?? 'Ação realizada com sucesso!';

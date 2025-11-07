@@ -34,7 +34,7 @@ if (!function_exists('upmkt_get_current_datetime')) {
 }
 
 /**
- * Gera um nome de arquivo para exportação de assinaturas
+ * Gera um nome de arquivo para exportação de doações
  *
  * @return string Nome do arquivo CSV
  */
@@ -54,7 +54,7 @@ function upmkt_generate_csv_filename(): string
     $mes_num = (int) $dt->format('n'); // 1-12
     $mes = $meses_pt[$mes_num - 1];
 
-    return sprintf('assinaturas_%s%s%s_%sh%s.csv', $dia, $mes, $ano, $hora, $minuto);
+    return sprintf('doacoes_%s%s%s_%sh%s.csv', $dia, $mes, $ano, $hora, $minuto);
 }
 
 

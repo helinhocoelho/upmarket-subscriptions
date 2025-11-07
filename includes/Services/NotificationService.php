@@ -34,7 +34,7 @@ class NotificationService
         // Notificações de cancelamento
         add_action('upmkt_subscription_cancelled', [$this, 'send_cancellation_email'], 10, 2);
 
-        // Notificação de nova assinatura
+        // Notificação de nova doação
         add_action('upmkt_subscription_created', [$this, 'send_new_subscription_email'], 10, 1);
     }
 
@@ -52,7 +52,7 @@ class NotificationService
         }
 
         $to = $user->user_email;
-        $subject = 'Pagamento da sua assinatura foi processado';
+        $subject = 'Pagamento da sua doação foi processado';
 
         $message = $this->get_email_template('payment_success', [
             'user_name' => $user->display_name,
@@ -82,7 +82,7 @@ class NotificationService
         }
 
         $to = $user->user_email;
-        $subject = 'Problema com o pagamento da sua assinatura';
+        $subject = 'Problema com o pagamento da sua doação';
 
         $message = $this->get_email_template('payment_failed', [
             'user_name' => $user->display_name,
@@ -117,7 +117,7 @@ class NotificationService
         }
 
         $to = $user->user_email;
-        $subject = 'Sua assinatura foi cancelada';
+        $subject = 'Sua doação foi cancelada';
 
         $message = $this->get_email_template('cancellation', [
             'user_name' => $user->display_name,
@@ -132,7 +132,7 @@ class NotificationService
     }
 
     /**
-     * Envia e-mail de nova assinatura
+     * Envia e-mail de nova doação
      *
      * @param Subscription $subscription
      */
@@ -144,7 +144,7 @@ class NotificationService
         }
 
         $to = $user->user_email;
-        $subject = 'Bem-vindo à sua nova assinatura!';
+        $subject = 'Bem-vindo à sua nova doação!';
 
         $message = $this->get_email_template('new_subscription', [
             'user_name' => $user->display_name,
@@ -168,13 +168,13 @@ class NotificationService
     private function send_admin_notification(Subscription $subscription, array $payment_result): void
     {
         $to = get_option('admin_email');
-        $subject = '[UP Market] Falha crítica em assinatura';
+        $subject = '[UP Market] Falha crítica em doação';
 
         $user = get_userdata($subscription->get_user_id());
         $user_name = $user ? $user->display_name : 'Usuário desconhecido';
 
-        $message = "Falha crítica no processamento da assinatura:\n\n";
-        $message .= "Assinatura ID: {$subscription->get_id()}\n";
+        $message = "Falha crítica no processamento da doação:\n\n";
+        $message .= "Doação ID: {$subscription->get_id()}\n";
         $message .= "Usuário: {$user_name} (ID: {$subscription->get_user_id()})\n";
         $message .= "Plano: {$this->get_plan_name($subscription->get_plan_id())}\n";
         $message .= "Erro: " . ($payment_result['errors'][0] ?? 'Erro desconhecido') . "\n";
@@ -199,7 +199,7 @@ class NotificationService
             'payment_success' => "
 Olá {user_name},
 
-Seu pagamento da assinatura #{subscription_id} no valor de {amount} foi processado com sucesso.
+Seu pagamento da doação #{subscription_id} no valor de {amount} foi processado com sucesso.
 
 Próxima cobrança: {next_billing_date}
 ID da transação: {transaction_id}
@@ -211,7 +211,7 @@ Equipe UP Market
             'payment_failed' => "
 Olá {user_name},
 
-Ocorreu um problema ao processar o pagamento da sua assinatura #{subscription_id}.
+Ocorreu um problema ao processar o pagamento da sua doação #{subscription_id}.
 
 Valor: {amount}
 Erro: {error_message}
@@ -226,7 +226,7 @@ Equipe UP Market
             'cancellation' => "
 Olá {user_name},
 
-Sua assinatura #{subscription_id} foi cancelada.
+Sua doação #{subscription_id} foi cancelada.
 
 Motivo: {cancellation_reason}
 Data do cancelamento: {cancellation_date}
@@ -240,10 +240,10 @@ Equipe UP Market
             'new_subscription' => "
 Olá {user_name},
 
-Bem-vindo à sua nova assinatura!
+Bem-vindo à sua nova doação!
 
 Plano: {plan_name}
-ID da assinatura: #{subscription_id}
+ID da doação: #{subscription_id}
 Data de início: {start_date}
 Próxima cobrança: {next_billing_date}
 
@@ -296,7 +296,7 @@ Equipe UP Market
     }
 
     /**
-     * Retorna o valor formatado da assinatura
+     * Retorna o valor formatado da doação
      *
      * @param Subscription $subscription
      * @return string
@@ -330,7 +330,7 @@ Equipe UP Market
         $reasons = [
             'user_request' => 'Solicitação do usuário',
             'payment_failure' => 'Falha no pagamento',
-            'expired' => 'Assinatura expirada',
+            'expired' => 'Doação expirada',
             'admin_cancelled' => 'Cancelado pelo administrador'
         ];
 

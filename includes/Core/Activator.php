@@ -31,7 +31,7 @@ class Activator
 
         $sql = [];
 
-        // Tabela de planos de assinatura
+        // Tabela de planos de doação
         $sql[] = "CREATE TABLE {$wpdb->prefix}upmkt_subscription_plans (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(200) NOT NULL,
@@ -48,7 +48,7 @@ class Activator
             PRIMARY KEY (id)
         ) {$charset_collate};";
 
-        // Tabela de assinaturas
+        // Tabela de doações
         $sql[] = "CREATE TABLE {$wpdb->prefix}upmkt_subscriptions (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
@@ -64,7 +64,7 @@ class Activator
             KEY status (status)
         ) {$charset_collate};";
 
-        // Tabela de metadados das assinaturas
+        // Tabela de metadados das doações
         $sql[] = "CREATE TABLE {$wpdb->prefix}upmkt_subscription_meta (
             meta_id bigint(20) NOT NULL AUTO_INCREMENT,
             subscription_id bigint(20) NOT NULL,

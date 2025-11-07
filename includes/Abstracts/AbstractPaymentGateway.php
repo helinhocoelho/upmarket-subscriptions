@@ -84,7 +84,7 @@ abstract class AbstractPaymentGateway implements PaymentGatewayInterface
     }
 
     /**
-     * NOVO: Valida assinatura do webhook
+     * NOVO: Valida doação do webhook
      *
      * @param array $webhook_data
      * @return bool

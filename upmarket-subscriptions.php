@@ -2,7 +2,7 @@
 /**
  * Plugin Name: UP Market Subscriptions
  * Plugin URI: https://upmarket.com.br
- * Description: Sistema de assinaturas recorrentes personalizado
+ * Description: Sistema de doações recorrentes personalizado
  * Version: 1.0.0
  * Author: UP Market - Hélio Coelho
  * Text Domain: upmarket-subscriptions

@@ -220,18 +220,18 @@ class AdminMenu
         // Menu principal
         add_menu_page(
             'UP Market Subscriptions',
-            'Assinaturas',
+            'Doações',
             'manage_upmkt_subscriptions',
             'upmkt-subscriptions',
             [$this, 'render_dashboard_page'],
-            'dashicons-update',
+            'dashicons-heart',
             30
         );
 
         // Submenus
         add_submenu_page(
             'upmkt-subscriptions',
-            'Dashboard - Assinaturas',
+            'Dashboard - Doações',
             'Dashboard',
             'manage_upmkt_subscriptions',
             'upmkt-subscriptions',
@@ -240,8 +240,8 @@ class AdminMenu
 
         add_submenu_page(
             'upmkt-subscriptions',
-            'Todas as Assinaturas',
-            'Todas as Assinaturas',
+            'Todas as doações',
+            'Todas as doações',
             'manage_upmkt_subscriptions',
             'upmkt-subscriptions-list',
             [$this, 'render_subscriptions_page']
@@ -249,7 +249,7 @@ class AdminMenu
 
         add_submenu_page(
             'upmkt-subscriptions',
-            'Planos de Assinatura',
+            'Planos de Doação',
             'Planos',
             'manage_upmkt_subscriptions',
             'upmkt-subscription-plans',
@@ -297,7 +297,7 @@ class AdminMenu
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('upmkt_admin_nonce'),
             'i18n' => [
-                'confirm_cancel' => 'Tem certeza que deseja cancelar esta assinatura?',
+                'confirm_cancel' => 'Tem certeza que deseja cancelar esta doação?',
                 'confirm_delete' => 'Tem certeza que deseja excluir este plano?',
                 'processing' => 'Processando...'
             ]
@@ -352,17 +352,17 @@ class AdminMenu
         $stats = $this->get_dashboard_stats();
         ?>
         <div class="wrap upmkt-admin">
-            <h1 class="wp-heading-inline">Dashboard - Assinaturas</h1>
+            <h1 class="wp-heading-inline">Dashboard - Doações</h1>
             
             <div class="upmkt-dashboard-stats">
                 <div class="upmkt-stat-card">
                     <div class="upmkt-stat-number"><?php echo esc_html($stats['total_subscriptions']); ?></div>
-                    <div class="upmkt-stat-label">Total de Assinaturas</div>
+                    <div class="upmkt-stat-label">Total de Doações</div>
                 </div>
                 
                 <div class="upmkt-stat-card">
                     <div class="upmkt-stat-number"><?php echo esc_html($stats['active_subscriptions']); ?></div>
-                    <div class="upmkt-stat-label">Assinaturas Ativas</div>
+                    <div class="upmkt-stat-label">Doações Ativas</div>
                 </div>
                 
                 <div class="upmkt-stat-card">
@@ -379,14 +379,14 @@ class AdminMenu
             <div class="upmkt-dashboard-content">
                 <div class="upmkt-dashboard-column">
                     <div class="upmkt-card">
-                        <h3>Assinaturas Recentes</h3>
+                        <h3>Doações Recentes</h3>
                         <?php $this->render_recent_subscriptions(); ?>
                     </div>
                 </div>
                 
                 <div class="upmkt-dashboard-column">
                     <div class="upmkt-card">
-                        <h3>Status das Assinaturas</h3>
+                        <h3>Status das Doações</h3>
                         <?php $this->render_subscriptions_chart(); ?>
                     </div>
                 </div>
@@ -396,7 +396,7 @@ class AdminMenu
     }
 
     /**
-     * Renderiza a página de listagem de assinaturas
+     * Renderiza a página de listagem de doações
      */
     public function render_subscriptions_page(): void
     {
@@ -421,7 +421,7 @@ class AdminMenu
             return;
         }
 
-        // Lista de assinaturas
+        // Lista de doações
         $subscriptions_table = new \UPMarket\Subscriptions\Admin\SubscriptionsListTable();
         $subscriptions_table->prepare_items();
 
@@ -435,31 +435,37 @@ class AdminMenu
         ];
         ?>
     	<div class="wrap upmkt-admin">
-        <h1 class="wp-heading-inline">Todas as Assinaturas</h1>
+        <h1 class="wp-heading-inline">Lista de Doações</h1>
 
         <?php $this->render_subscriptions_admin_notices(); ?>
 
-        <div class="upmkt-admin-actions">
-						<a href="<?php echo esc_url(admin_url('admin.php?page=upmkt-subscriptions-list&action=export')); ?>" class="button">
-								Exportar CSV
-						</a>
-        </div>
+        <?php
+          $export_csv_button = '
+					<div class="upmkt-admin-actions">
+							<a href="' . esc_url(admin_url('admin.php?page=upmkt-subscriptions-list&action=export')) . '" class="button">
+									Exportar CSV
+							</a>
+					</div>';
+        ?>
 
         <!-- O FORM é obrigatório para o WP_List_Table funcionar -->
         <form method="post">
             <?php
-                // Hidden inputs extras
-                foreach ($hidden_inputs as $name => $value) {
-                    if ($value !== '') {
-                        printf(
-                            '<input type="hidden" name="%s" value="%s">',
-                            esc_attr($name),
-                            esc_attr($value)
-                        );
-                    }
-                }
+        // Hidden inputs extras
+        foreach ($hidden_inputs as $name => $value) {
+            if ($value !== '') {
+                printf(
+                    '<input type="hidden" name="%s" value="%s">',
+                    esc_attr($name),
+                    esc_attr($value)
+                );
+            }
+        }
 
-        $subscriptions_table->search_box('Buscar assinaturas', 'search');
+        $subscriptions_table->search_box('Buscar doações', 'search');
+
+        echo $export_csv_button;
+
         $subscriptions_table->display();
         ?>
         </form>
@@ -486,7 +492,7 @@ class AdminMenu
     		", ARRAY_A);
 
         if (empty($results)) {
-            wp_die('Nenhuma assinatura encontrada para exportar.');
+            wp_die('Nenhuma doação encontrada para exportar.');
         }
 
         $filename = upmkt_generate_csv_filename();
@@ -510,16 +516,16 @@ class AdminMenu
 
 
     /**
-     * Renderiza notificações para assinaturas
+     * Renderiza notificações para doações
      */
     private function render_subscriptions_admin_notices(): void
     {
         if (isset($_GET['message'])) {
             $messages = [
-                'updated' => 'Assinatura atualizada com sucesso!',
-                'cancelled' => 'Assinatura cancelada com sucesso!',
-                'resumed' => 'Assinatura retomada com sucesso!',
-                'deleted' => 'Assinatura excluída com sucesso!'
+                'updated' => 'Doação atualizada com sucesso!',
+                'cancelled' => 'Doação cancelada com sucesso!',
+                'resumed' => 'Doação retomada com sucesso!',
+                'deleted' => 'Doação excluída com sucesso!'
             ];
 
             $message = $messages[$_GET['message']] ?? 'Ação realizada com sucesso!';
@@ -569,7 +575,7 @@ class AdminMenu
 
         global $wpdb;
 
-        // Verificar se há assinaturas usando este plano
+        // Verificar se há doações usando este plano
         $subscriptions_count = $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->prefix}upmkt_subscriptions WHERE plan_id = %d",
@@ -578,7 +584,7 @@ class AdminMenu
         );
 
         if ($subscriptions_count > 0) {
-            $this->add_admin_notice('Não é possível excluir este plano pois existem assinaturas ativas vinculadas a ele.', 'error');
+            $this->add_admin_notice('Não é possível excluir este plano pois existem doações ativas vinculadas a ele.', 'error');
             return;
         }
 
@@ -621,7 +627,7 @@ class AdminMenu
         $plans_table->prepare_items();
         ?>
 					<div class="wrap upmkt-admin">
-							<h1 class="wp-heading-inline">Planos de Assinatura</h1>
+							<h1 class="wp-heading-inline">Planos de Doação</h1>
 							<a href="<?php echo admin_url('admin.php?page=upmkt-subscription-plans&action=add'); ?>" class="page-title-action">
 									Adicionar Novo
 							</a>
@@ -707,7 +713,7 @@ class AdminMenu
                                        min="0" 
                                        class="small-text" 
                                        required>
-                                <p class="description">Valor da assinatura em reais.</p>
+                                <p class="description">Valor da doação em reais.</p>
                             </td>
                         </tr>
                         
@@ -836,7 +842,7 @@ class AdminMenu
         $current_customer_area_page_id = get_option('upmkt_customer_area_page_id');
         ?>
     <div class="wrap upmkt-admin">
-        <h1>Configurações - Assinaturas</h1>
+        <h1>Configurações - Doações</h1>
         
         <nav class="nav-tab-wrapper">
             <a href="#general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
@@ -849,7 +855,7 @@ class AdminMenu
             <?php if ($active_tab === 'general'): ?>
                 <div id="general" class="tab-content active">
                     <div class="upmkt-card">
-                        <h2>Configurações Gerais</h2>
+                        <h3>Configurações Gerais</h3>
                         
                         <form method="post">
                             <?php wp_nonce_field('upmkt_save_settings', 'upmkt_settings_nonce'); ?>
@@ -1126,7 +1132,7 @@ class AdminMenu
     }
 
     /**
-     * Renderiza assinaturas recentes com dados otimizados
+     * Renderiza doações recentes com dados otimizados
      */
     private function render_recent_subscriptions(): void
     {
@@ -1144,7 +1150,7 @@ class AdminMenu
     ");
 
         if (empty($subscriptions)) {
-            echo '<p>Nenhuma assinatura encontrada.</p>';
+            echo '<p>Nenhuma doação encontrada.</p>';
             return;
         }
         ?>

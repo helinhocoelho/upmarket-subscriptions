@@ -43,7 +43,7 @@ class CronHandlers
     }
 
     /**
-     * Processa assinaturas diárias
+     * Processa doações diárias
      */
     public function handle_daily_subscriptions(): void
     {
@@ -108,7 +108,7 @@ class CronHandlers
     }
 
     /**
-     * Limpa assinaturas expiradas
+     * Limpa doações expiradas
      */
     private function clean_expired_subscriptions(): void
     {

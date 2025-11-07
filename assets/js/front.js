@@ -547,11 +547,11 @@ jQuery(document).ready(function ($) {
     };
   }
 
-  // Ações das Assinaturas
+  // Ações das Doações
   window.upmktCancelSubscription = function (subscriptionId) {
     upmktShowConfirmModal(
-      "Cancelar Assinatura",
-      "Tem certeza que deseja cancelar esta assinatura?\n\nApós o cancelamento, você perderá o acesso ao plano na data de vencimento. Você poderá criar uma nova assinatura a qualquer momento.",
+      "Cancelar Doação",
+      "Tem certeza que deseja cancelar esta doação?\n\nApós o cancelamento, você perderá o acesso ao plano na data de vencimento. Você poderá criar uma nova doação a qualquer momento.",
       () =>
         upmktHandleSubscriptionAction(
           "upmkt_cancel_subscription",
@@ -563,7 +563,7 @@ jQuery(document).ready(function ($) {
   window.upmktPauseSubscription = function (subscriptionId) {
     upmktShowConfirmModal(
       "Pausar recorrência",
-      "Deseja pausar a recorrência?\n\nVocê manterá o acesso até a data de vencimento, mas não serão feitas novas cobranças. Após a data de vencimento, a assinatura será cancelada automaticamente.",
+      "Deseja pausar a recorrência?\n\nVocê manterá o acesso até a data de vencimento, mas não serão feitas novas cobranças. Após a data de vencimento, a doação será cancelada automaticamente.",
       () =>
         upmktHandleSubscriptionAction(
           "upmkt_pause_subscription",
@@ -575,7 +575,7 @@ jQuery(document).ready(function ($) {
   window.upmktResumeSubscription = function (subscriptionId) {
     upmktShowConfirmModal(
       "Retomar Recorrência",
-      "Deseja retomar a recorrência?\n\nAs cobranças serão reiniciadas a partir da próxima data de vencimento. Sua assinatura voltará ao estado ativo.",
+      "Deseja retomar a recorrência?\n\nAs cobranças serão reiniciadas a partir da próxima data de vencimento. Sua doação voltará ao estado ativo.",
       () =>
         upmktHandleSubscriptionAction(
           "upmkt_resume_subscription",

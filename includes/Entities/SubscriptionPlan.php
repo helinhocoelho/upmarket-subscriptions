@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Abstracts\AbstractSubscriptionPlan;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Entidade concreta para Planos de Assinatura
+ * Entidade concreta para Planos de Doação
  *
  * @package UPMarket\Subscriptions\Entities
  */

@@ -64,6 +64,11 @@
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
+.upmkt-plans {
+  display: flex;
+  justify-content: center;
+}
+
 /* Reset e base */
 .upmkt-checkout,
 .upmkt-registration-form,
@@ -171,7 +176,7 @@
   padding: var(--spacing-lg);
 }
 
-.upmkt-customer-area h2 {
+.upmkt-customer-area h3 {
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--gray-900);
@@ -179,7 +184,7 @@
   text-align: center;
 }
 
-/* Cards de assinatura compactos */
+/* Cards de doação compactos */
 .upmkt-subscription-card {
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-lg);
@@ -250,7 +255,7 @@
 /* Detalhes compactos em grid */
 .upmkt-subscription-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: var(--spacing-base);
   margin-bottom: var(--spacing-base);
 }
@@ -304,8 +309,9 @@
   line-height: 1.4;
 }
 
-.upmkt-payment-info h4 {
-  color: #7b1fa2;
+.upmkt-resubscribe-content h5,
+.upmkt-recurrence-info h6,
+.upmkt-payment-info h6 {
   margin: 0 0 var(--spacing-sm) 0;
   font-size: var(--font-size-base);
   font-weight: 600;
@@ -572,7 +578,7 @@
 .upmkt-checkout-success {
   text-align: center;
   padding: var(--spacing-xl);
-  max-width: 500px;
+  max-width: 780px;
   margin: 0 auto;
   background: white;
   border-radius: var(--border-radius-lg);

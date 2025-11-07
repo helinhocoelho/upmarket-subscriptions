@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Entities\SubscriptionPlan;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Shortcode para exibir planos de assinatura
+ * Shortcode para exibir planos de doação
  *
  * @package UPMarket\Subscriptions\Shortcodes
  */
@@ -39,12 +39,12 @@ class SubscriptionPlansShortcode
             $plans = SubscriptionPlan::get_active_plans();
 
             if (empty($plans)) {
-                return '<p>Nenhum plano de assinatura disponível no momento.</p>';
+                return '<p>Nenhum plano de doação disponível no momento.</p>';
             }
 
             ob_start();
             ?>
-							<div class="upmkt-plans upmkt-plans-grid">
+							<div class="upmkt-plans">
 									<?php foreach ($plans as $plan): ?>
 											<?php $this->render_plan_card($plan, $atts); ?>
 									<?php endforeach; ?>
@@ -54,7 +54,7 @@ class SubscriptionPlansShortcode
 
         } catch (\Exception $e) {
             Logger::instance()->error('Shortcode plans error: ' . $e->getMessage(), 'shortcodes');
-            return '<p>Erro ao carregar planos de assinatura.</p>';
+            return '<p>Erro ao carregar planos de doação.</p>';
         }
     }
 
@@ -113,10 +113,10 @@ class SubscriptionPlansShortcode
                                         ">
                                     </i>
                                 </div>
-                                <h2 class="content-box-heading fusion-responsive-typography-calculated"
+                                <h3 class="content-box-heading fusion-responsive-typography-calculated"
                                     style="--h2_typography-font-size: 20px; line-height: var(--awb-typography1-line-height);">
                                     <?php echo $name; ?>
-                                </h2>
+                                </h3>
                             </a>
                         </div>
                     </div>

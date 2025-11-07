@@ -3,7 +3,7 @@
 namespace UPMarket\Subscriptions\Interfaces;
 
 /**
- * Interface para Planos de Assinatura
+ * Interface para Planos de Doação
  *
  * @package UPMarket\Subscriptions\Interfaces
  */

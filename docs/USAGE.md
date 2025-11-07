@@ -2,7 +2,7 @@
 
 ## 📋 Visão Geral
 
-Sistema completo de assinaturas recorrentes para WordPress com integração com a Rede.
+Sistema completo de doações recorrentes para WordPress com integração com a Rede.
 
 ## 🚀 Instalação Rápida
 
@@ -20,9 +20,9 @@ Sistema completo de assinaturas recorrentes para WordPress com integração com 
    ```
 
 2. **Configuração Inicial**
-   - Acesse `Assinaturas > Configurações`
+   - Acesse `Doações > Configurações`
    - Configure o gateway da Rede
-   - Crie seus planos de assinatura
+   - Crie seus planos de doação
 
 ## 🎯 Shortcodes Disponíveis
 
@@ -65,8 +65,8 @@ Sistema completo de assinaturas recorrentes para WordPress com integração com 
 
 **Funcionalidades:**
 
-- Lista assinaturas do usuário
-- Cancelamento de assinaturas
+- Lista doações do usuário
+- Cancelamento de doações
 - Histórico de pagamentos
 
 ## ⚙️ Configuração da Rede
@@ -85,7 +85,7 @@ Configure na Rede o webhook:
 https://seusite.com/upmkt-webhook/rede/
 ```
 
-### Gerenciar Assinatura
+### Gerenciar Doação
 
 ```php
 $subscription = new UPMarket\Subscriptions\Entities\Subscription($subscription_id);
@@ -104,11 +104,11 @@ $subscription->resume();
 
 ### Tabelas do Banco
 
-- `wp_upmkt_subscription_plans` - Planos de assinatura
-- `wp_upmkt_subscriptions` - Assinaturas dos usuários
-- `wp_upmkt_subscription_meta` - Metadados das assinaturas
+- `wp_upmkt_subscription_plans` - Planos de doação
+- `wp_upmkt_subscriptions` - Doações dos usuários
+- `wp_upmkt_subscription_meta` - Metadados das doações
 
-### Status de Assinatura
+### Status de Doação
 
 - `active` - Ativa e em dia
 - `pending` - Aguardando pagamento

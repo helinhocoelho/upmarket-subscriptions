@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Abstracts\AbstractSubscription;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Entidade concreta para Assinaturas
+ * Entidade concreta para Doações
  *
  * @package UPMarket\Subscriptions\Entities
  */
@@ -30,7 +30,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Carrega os dados da assinatura
+     * Carrega os dados da doação
      *
      * @return bool
      */
@@ -91,7 +91,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Carrega os metadados da assinatura
+     * Carrega os metadados da doação
      */
     private function load_meta(): void
     {
@@ -112,7 +112,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Salva a assinatura
+     * Salva a doação
      *
      * @return bool
      */
@@ -205,7 +205,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Cria uma nova assinatura
+     * Cria uma nova doação
      *
      * @param int $user_id
      * @param int $plan_id
@@ -238,7 +238,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Verifica se a assinatura existe
+     * Verifica se a doação existe
      */
     public function exists(): bool
     {
@@ -286,7 +286,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Verifica se a assinatura está pausada
+     * Verifica se a doação está pausada
      */
     public function is_paused(): bool
     {
@@ -294,7 +294,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Pausa a assinatura
+     * Pausa a doação
      */
     public function pause(): bool
     {
@@ -307,7 +307,7 @@ class Subscription extends AbstractSubscription
     }
 
     /**
-     * Retoma a assinatura pausada
+     * Retoma a doação pausada
      */
     public function resume(): bool
     {

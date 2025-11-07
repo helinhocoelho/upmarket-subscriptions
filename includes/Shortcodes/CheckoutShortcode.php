@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Entities\SubscriptionPlan;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Shortcode para checkout de assinatura
+ * Shortcode para checkout de doação
  *
  * @package UPMarket\Subscriptions\Shortcodes
  */
@@ -61,7 +61,7 @@ class CheckoutShortcode
         ?>
     <div class="upmkt-checkout">
         <div class="upmkt-checkout-summary">
-            <h3>Resumo da Assinatura</h3>
+            <h3>Resumo da Doação</h3>
             <div class="upmkt-plan-summary">
                 <strong><?php echo esc_html($plan->get_name()); ?></strong><br>
                 <?php echo esc_html($plan->get_formatted_price()); ?> / <?php echo esc_html($plan->get_formatted_period()); ?>
@@ -114,7 +114,7 @@ class CheckoutShortcode
             
             <div class="upmkt-form-actions">
                 <button type="submit" class="upmkt-submit-button">
-                    Finalizar Assinatura
+                    Realizar a Doação
                 </button>
                 
                 <div class="upmkt-loading" style="display: none;">
@@ -548,13 +548,13 @@ class CheckoutShortcode
                 return;
             }
 
-            // Processa a assinatura via SubscriptionManager
+            // Processa a doação via SubscriptionManager
             $subscription_manager = new \UPMarket\Subscriptions\Services\SubscriptionManager();
             $result = $subscription_manager->create_subscription($user_id, $plan_id, $payment_data, $payment_method);
 
             if ($result['success']) {
                 wp_send_json_success([
-                    'message' => 'Assinatura criada com sucesso! Redirecionando...',
+                    'message' => 'Doação criada com sucesso! Redirecionando...',
                     'redirect_url' => $this->get_success_url($result['subscription_id'])
                 ]);
             } else {
