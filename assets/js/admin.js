@@ -8,8 +8,13 @@
 
     init() {
       this.initAccordions();
+      this.initTabs();
       this.bindEvents();
     }
+
+    // =============================================
+    // INICIALIZAÇÃO DE COMPONENTES
+    // =============================================
 
     initAccordions() {
       // Fecha todos os accordions inicialmente
@@ -18,52 +23,37 @@
       $(".upmkt-accordion-icon").text("+");
 
       // Auto-abre accordion se houver erros de validação
-      $(".upmkt-gateway-accordion").each((index, accordion) => {
-        const $accordion = $(accordion);
-        const $form = $accordion.find("form");
+      this.autoOpenAccordionsWithErrors();
+    }
 
-        // Verifica se há mensagens de erro do WordPress
-        if ($form.find(".notice-error, .error").length > 0) {
-          this.openAccordion($accordion);
-        }
+    initTabs() {
+      $(".nav-tab").on("click", (e) => {
+        e.preventDefault();
+        this.handleTabClick(e);
       });
     }
 
     bindEvents() {
-      // Accordion functionality
-      $(document).on(
-        "click",
-        ".upmkt-accordion-toggle",
-        this.handleAccordionToggle.bind(this)
-      );
+      this.bindAccordionEvents();
+      this.bindTestConnectionEvents();
+      this.bindSubscriptionEvents();
+      this.bindExportEvents();
+      this.bindDetailsEvents();
+    }
 
-      // Test connection functionality
-      $(document).on(
-        "click",
-        ".upmkt-test-connection",
-        this.handleTestConnection.bind(this)
-      );
+    // =============================================
+    // MANIPULAÇÃO DE ACCORDIONS
+    // =============================================
 
-      // Cancelar doação
-      $(document).on(
-        "click",
-        ".upmkt-cancel-subscription",
-        this.handleCancelSubscription.bind(this)
-      );
+    autoOpenAccordionsWithErrors() {
+      $(".upmkt-gateway-accordion").each((index, accordion) => {
+        const $accordion = $(accordion);
+        const $form = $accordion.find("form");
 
-      // Exportar dados
-      $(document).on(
-        "click",
-        ".upmkt-export-btn",
-        this.handleExport.bind(this)
-      );
-
-      // Toggle de detalhes
-      $(document).on(
-        "click",
-        ".upmkt-toggle-details",
-        this.toggleDetails.bind(this)
-      );
+        if ($form.find(".notice-error, .error").length > 0) {
+          this.openAccordion($accordion);
+        }
+      });
     }
 
     handleAccordionToggle(e) {
@@ -71,20 +61,14 @@
 
       const $toggle = $(e.currentTarget);
       const $accordion = $toggle.closest(".upmkt-gateway-accordion");
-      const $content = $accordion.find(".upmkt-accordion-content");
       const isExpanded = $toggle.attr("aria-expanded") === "true";
 
-      // Se já está expandido, apenas fecha
       if (isExpanded) {
         this.closeAccordion($accordion);
-        return;
+      } else {
+        this.closeAllAccordions();
+        this.openAccordion($accordion);
       }
-
-      // Fecha todos os outros accordions
-      this.closeAllAccordions();
-
-      // Abre o accordion clicado
-      this.openAccordion($accordion);
     }
 
     openAccordion($accordion) {
@@ -115,6 +99,33 @@
       });
     }
 
+    bindAccordionEvents() {
+      $(document).on(
+        "click",
+        ".upmkt-accordion-toggle",
+        this.handleAccordionToggle.bind(this)
+      );
+    }
+
+    // =============================================
+    // SISTEMA DE TABS
+    // =============================================
+
+    handleTabClick(e) {
+      const $tab = $(e.currentTarget);
+      const target = $tab.attr("href");
+
+      $(".nav-tab").removeClass("nav-tab-active");
+      $(".tab-content").removeClass("active");
+
+      $tab.addClass("nav-tab-active");
+      $(target).addClass("active");
+    }
+
+    // =============================================
+    // TESTE DE CONEXÃO COM GATEWAYS
+    // =============================================
+
     handleTestConnection(e) {
       e.preventDefault();
 
@@ -122,34 +133,56 @@
       const gatewayId = $button.data("gateway");
       const $result = $(`#upmkt-test-result-${gatewayId}`);
 
-      $button.prop("disabled", true).text("Testando...");
-      $result.hide().removeClass("success error");
+      this.disableTestButton($button);
+      this.resetTestResult($result);
 
       $.post(ajaxurl, {
         action: "upmkt_test_gateway_connection",
         gateway_id: gatewayId,
-        nonce: upmkt_admin?.nonce || $("#upmkt_admin_nonce").val(),
+        nonce: this.getAdminNonce(),
       })
-        .done((response) => {
-          $result
-            .show()
-            .addClass(response.success ? "success" : "error")
-            .html(
-              `<p>${
-                response.data?.message || "Resposta inválida do servidor"
-              }</p>`
-            );
-        })
-        .fail(() => {
-          $result
-            .show()
-            .addClass("error")
-            .html("<p>Erro ao testar conexão.</p>");
-        })
-        .always(() => {
-          $button.prop("disabled", false).text("Testar Conexão");
-        });
+        .done((response) => this.handleTestSuccess(response, $result))
+        .fail(() => this.handleTestFailure($result))
+        .always(() => this.enableTestButton($button));
     }
+
+    disableTestButton($button) {
+      $button.prop("disabled", true).text("Testando...");
+    }
+
+    enableTestButton($button) {
+      $button.prop("disabled", false).text("Testar Conexão");
+    }
+
+    resetTestResult($result) {
+      $result.hide().removeClass("success error");
+    }
+
+    handleTestSuccess(response, $result) {
+      const isSuccess = response.success;
+      const message = response.data?.message || "Resposta inválida do servidor";
+
+      $result
+        .show()
+        .addClass(isSuccess ? "success" : "error")
+        .html(`<p>${message}</p>`);
+    }
+
+    handleTestFailure($result) {
+      $result.show().addClass("error").html("<p>Erro ao testar conexão.</p>");
+    }
+
+    bindTestConnectionEvents() {
+      $(document).on(
+        "click",
+        ".upmkt-test-connection",
+        this.handleTestConnection.bind(this)
+      );
+    }
+
+    // =============================================
+    // GERENCIAMENTO DE ASSINATURAS
+    // =============================================
 
     handleCancelSubscription(e) {
       e.preventDefault();
@@ -157,45 +190,69 @@
       const $button = $(e.currentTarget);
       const subscriptionId = $button.data("subscription-id");
 
-      if (
-        !confirm(
-          upmkt_admin?.i18n?.confirm_cancel ||
-            "Tem certeza que deseja cancelar esta doação?"
-        )
-      ) {
+      if (!this.confirmCancelSubscription()) {
         return;
       }
 
-      $button
-        .prop("disabled", true)
-        .text(upmkt_admin?.i18n?.processing || "Processando...");
+      this.disableSubscriptionButton($button);
 
       $.ajax({
-        url: upmkt_admin?.ajax_url || ajaxurl,
+        url: this.getAdminAjaxUrl(),
         type: "POST",
         data: {
           action: "upmkt_admin_cancel_subscription",
           subscription_id: subscriptionId,
-          nonce: upmkt_admin?.nonce,
+          nonce: this.getAdminNonce(),
         },
-        success: (response) => {
-          if (response.success) {
-            this.showNotice(response.data.message, "success");
-            $button.closest("tr").fadeOut();
-          } else {
-            this.showNotice(
-              response.data?.message || "Erro ao cancelar doação",
-              "error"
-            );
-            $button.prop("disabled", false).text("Cancelar");
-          }
-        },
-        error: () => {
-          this.showNotice("Erro de conexão.", "error");
-          $button.prop("disabled", false).text("Cancelar");
-        },
+        success: (response) => this.handleCancelSuccess(response, $button),
+        error: () => this.handleCancelError($button),
       });
     }
+
+    confirmCancelSubscription() {
+      const message =
+        upmkt_admin?.i18n?.confirm_cancel ||
+        "Tem certeza que deseja cancelar esta doação?";
+      return confirm(message);
+    }
+
+    disableSubscriptionButton($button) {
+      const processingText = upmkt_admin?.i18n?.processing || "Processando...";
+      $button.prop("disabled", true).text(processingText);
+    }
+
+    enableSubscriptionButton($button, text = "Cancelar") {
+      $button.prop("disabled", false).text(text);
+    }
+
+    handleCancelSuccess(response, $button) {
+      if (response.success) {
+        this.showNotice(response.data.message, "success");
+        $button.closest("tr").fadeOut();
+      } else {
+        const errorMessage =
+          response.data?.message || "Erro ao cancelar doação";
+        this.showNotice(errorMessage, "error");
+        this.enableSubscriptionButton($button);
+      }
+    }
+
+    handleCancelError($button) {
+      this.showNotice("Erro de conexão.", "error");
+      this.enableSubscriptionButton($button);
+    }
+
+    bindSubscriptionEvents() {
+      $(document).on(
+        "click",
+        ".upmkt-cancel-subscription",
+        this.handleCancelSubscription.bind(this)
+      );
+    }
+
+    // =============================================
+    // EXPORTAÇÃO DE DADOS
+    // =============================================
 
     handleExport(e) {
       e.preventDefault();
@@ -203,7 +260,7 @@
       const $button = $(e.currentTarget);
       const format = $button.data("format") || "csv";
 
-      $button.prop("disabled", true).text("Exportando...");
+      this.disableExportButton($button);
 
       // Simula export - implementar AJAX real posteriormente
       setTimeout(() => {
@@ -211,9 +268,29 @@
           "Exportação iniciada. Verifique seu e-mail.",
           "success"
         );
-        $button.prop("disabled", false).text("Exportar");
+        this.enableExportButton($button);
       }, 1000);
     }
+
+    disableExportButton($button) {
+      $button.prop("disabled", true).text("Exportando...");
+    }
+
+    enableExportButton($button) {
+      $button.prop("disabled", false).text("Exportar");
+    }
+
+    bindExportEvents() {
+      $(document).on(
+        "click",
+        ".upmkt-export-btn",
+        this.handleExport.bind(this)
+      );
+    }
+
+    // =============================================
+    // DETALHES E UTILITÁRIOS
+    // =============================================
 
     toggleDetails(e) {
       e.preventDefault();
@@ -227,36 +304,74 @@
       );
     }
 
-    showNotice(message, type = "info") {
-      const noticeClass =
-        type === "error"
-          ? "notice-error"
-          : type === "success"
-          ? "notice-success"
-          : "notice-info";
+    bindDetailsEvents() {
+      $(document).on(
+        "click",
+        ".upmkt-toggle-details",
+        this.toggleDetails.bind(this)
+      );
+    }
 
-      const $notice = $(
+    // =============================================
+    // SISTEMA DE NOTIFICAÇÕES
+    // =============================================
+
+    showNotice(message, type = "info") {
+      const noticeClass = this.getNoticeClass(type);
+      const $notice = this.createNoticeElement(message, noticeClass);
+
+      $(".wrap").prepend($notice);
+      this.setupNoticeAutoRemove($notice);
+      this.setupNoticeDismiss($notice);
+    }
+
+    getNoticeClass(type) {
+      const noticeClasses = {
+        error: "notice-error",
+        success: "notice-success",
+        info: "notice-info",
+      };
+      return noticeClasses[type] || "notice-info";
+    }
+
+    createNoticeElement(message, noticeClass) {
+      return $(
         `<div class="notice ${noticeClass} is-dismissible" style="margin-top: 20px;">
           <p>${message}</p>
           <button type="button" class="notice-dismiss"></button>
         </div>`
       );
+    }
 
-      $(".wrap").prepend($notice);
-
-      // Auto-remove após 5 segundos
+    setupNoticeAutoRemove($notice) {
       setTimeout(() => {
         $notice.fadeOut(() => $notice.remove());
       }, 5000);
+    }
 
-      // Remove ao clicar no dismiss
-      $notice.find(".notice-dismiss").on("click", function () {
+    setupNoticeDismiss($notice) {
+      $notice.find(".notice-dismiss").on("click", () => {
         $notice.fadeOut(() => $notice.remove());
       });
     }
+
+    // =============================================
+    // UTILITÁRIOS
+    // =============================================
+
+    getAdminNonce() {
+      return upmkt_admin?.nonce || $("#upmkt_admin_nonce").val();
+    }
+
+    getAdminAjaxUrl() {
+      return upmkt_admin?.ajax_url || ajaxurl;
+    }
   }
 
-  // Inicializar quando documento estiver pronto
+  // =============================================
+  // INICIALIZAÇÃO
+  // =============================================
+
   $(document).ready(() => {
     new UPMktAdmin();
   });

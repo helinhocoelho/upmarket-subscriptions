@@ -279,23 +279,25 @@ class AdminMenu
         }
 
         wp_enqueue_style(
-            'upmkt-admin-css',
+            'upmkt-admin',
             UPMKT_PLUGIN_URL . 'assets/css/admin.css',
             [],
             UPMKT_VERSION
         );
 
         wp_enqueue_script(
-            'upmkt-admin-js',
+            'upmkt-admin',
             UPMKT_PLUGIN_URL . 'assets/js/admin.js',
             ['jquery'],
             UPMKT_VERSION,
             true
         );
 
-        wp_localize_script('upmkt-admin-js', 'upmkt_admin', [
+        $nonce = wp_create_nonce('upmkt_admin_nonce');
+
+        wp_localize_script('upmkt-admin', 'upmkt_admin', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('upmkt_admin_nonce'),
+            'nonce' => $nonce,
             'i18n' => [
                 'confirm_cancel' => 'Tem certeza que deseja cancelar esta doação?',
                 'confirm_delete' => 'Tem certeza que deseja excluir este plano?',
@@ -310,24 +312,23 @@ class AdminMenu
     public function enqueue_front_scripts(): void
     {
         wp_enqueue_style(
-            'upmkt-front-css',
+            'upmkt-front',
             UPMKT_PLUGIN_URL . 'assets/css/front.css',
             [],
             UPMKT_VERSION
         );
 
         wp_enqueue_script(
-            'upmkt-front-js',
+            'upmkt-front',
             UPMKT_PLUGIN_URL . 'assets/js/front.js',
             ['jquery'],
             UPMKT_VERSION,
             true
         );
 
-        // CORREÇÃO: Garantir que o nonce seja criado corretamente
         $nonce = wp_create_nonce('upmkt_front_nonce');
 
-        wp_localize_script('upmkt-front-js', 'upmkt_front', [
+        wp_localize_script('upmkt-front', 'upmkt_front', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => $nonce,
             'i18n' => [
@@ -953,60 +954,7 @@ class AdminMenu
             <?php do_action('upmkt_admin_settings_content'); ?>
         </div>
     </div>
-    
-    <style>
-    .nav-tab-wrapper {
-        margin-bottom: 20px;
-    }
-    
-    .tab-content {
-        display: none;
-    }
-    
-    .tab-content.active {
-        display: block;
-    }
-    
-    .upmkt-settings-content .form-table {
-        margin-top: 0;
-    }
-    
-    .upmkt-settings-content .form-table th {
-        width: 200px;
-    }
-    
-    #upmkt_checkout_page_id,
-    #upmkt_plans_page_id,
-    #upmkt_customer_area_page_id {
-        width: auto;
-        min-width: 300px;
-    }
-    
-    .upmkt-settings-content .description small {
-        color: #666;
-        font-size: 12px;
-    }
-    
-    .upmkt-settings-content .description a {
-        color: #0073aa;
-    }
-    </style>
-    
-    <script>
-    jQuery(document).ready(function($) {
-        // Tab navigation
-        $('.nav-tab').on('click', function(e) {
-            e.preventDefault();
-            var target = $(this).attr('href');
-            
-            $('.nav-tab').removeClass('nav-tab-active');
-            $('.tab-content').removeClass('active');
-            
-            $(this).addClass('nav-tab-active');
-            $(target).addClass('active');
-        });
-    });
-    </script>
+
     <?php
     }
 

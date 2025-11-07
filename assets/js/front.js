@@ -1,322 +1,366 @@
 jQuery(document).ready(function ($) {
-  // Tabs do formulário de registro
-  if ($(".upmkt-tab").length > 0) {
-    $(".upmkt-tab").on("click", function () {
-      var tabId = $(this).data("tab");
-      $(".upmkt-tab").removeClass("active");
-      $(".upmkt-tab-content").removeClass("active");
-      $(this).addClass("active");
-      $("#" + tabId).addClass("active");
-    });
-  }
+  "use strict";
 
-  // Função para aplicar máscara de CPF
-  function applyCPFMask(value) {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  }
-
-  // Função para aplicar máscara de CNPJ
-  function applyCNPJMask(value) {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{2})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1/$2")
-      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-  }
-
-  // Função para atualizar máscara e placeholder baseado no tipo selecionado
-  function updateDocumentMask() {
-    var documentType = $('input[name="document_type"]:checked').val();
-    var $documentField = $("#upmkt_document");
-
-    // VERIFICA SE O ELEMENTO EXISTE ANTES DE USAR
-    if (!$documentField.length) return;
-
-    // Remove qualquer máscara atual
-    var currentValue = $documentField.val().replace(/\D/g, "");
-
-    if (documentType === "cpf") {
-      // Aplica máscara de CPF
-      $documentField.val(applyCPFMask(currentValue));
-      $documentField.attr("placeholder", "000.000.000-00");
-      $documentField.attr("maxlength", 14);
-    } else {
-      // Aplica máscara de CNPJ
-      $documentField.val(applyCNPJMask(currentValue));
-      $documentField.attr("placeholder", "00.000.000/0000-00");
-      $documentField.attr("maxlength", 18);
+  class UPMktFrontend {
+    constructor() {
+      this.init();
     }
-  }
 
-  // Máscara dinâmica para CPF/CNPJ
-  if ($("#upmkt_document").length > 0) {
-    $("#upmkt_document").on("input", function () {
-      var documentType = $('input[name="document_type"]:checked').val();
-      var value = $(this).val().replace(/\D/g, "");
+    init() {
+      this.initTabs();
+      this.initDocumentMasks();
+      this.initCheckoutMasks();
+      this.initForms();
+      this.initSubscriptionActions();
+    }
+
+    // =============================================
+    // SISTEMA DE TABS
+    // =============================================
+
+    initTabs() {
+      if ($(".upmkt-tab").length > 0) {
+        $(".upmkt-tab").on("click", (e) => {
+          const $tab = $(e.currentTarget);
+          const tabId = $tab.data("tab");
+
+          $(".upmkt-tab").removeClass("active");
+          $(".upmkt-tab-content").removeClass("active");
+
+          $tab.addClass("active");
+          $("#" + tabId).addClass("active");
+        });
+      }
+    }
+
+    // =============================================
+    // MÁSCARAS DE DOCUMENTOS (CPF/CNPJ)
+    // =============================================
+
+    initDocumentMasks() {
+      if ($("#upmkt_document").length === 0) return;
+
+      // Aplica máscara quando o documento é digitado
+      $("#upmkt_document").on("input", (e) => {
+        const $input = $(e.currentTarget);
+        const documentType = $('input[name="document_type"]:checked').val();
+        const value = $input.val().replace(/\D/g, "");
+
+        $input.val(
+          documentType === "cpf"
+            ? this.applyCPFMask(value)
+            : this.applyCNPJMask(value)
+        );
+      });
+
+      // Altera a máscara quando o tipo muda
+      $('input[name="document_type"]').on("change", () => {
+        this.updateDocumentMask();
+      });
+
+      // Inicializa a máscara
+      this.updateDocumentMask();
+    }
+
+    applyCPFMask(value) {
+      return value
+        .replace(/\D/g, "")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    }
+
+    applyCNPJMask(value) {
+      return value
+        .replace(/\D/g, "")
+        .replace(/(\d{2})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1/$2")
+        .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+    }
+
+    updateDocumentMask() {
+      const documentType = $('input[name="document_type"]:checked').val();
+      const $documentField = $("#upmkt_document");
+
+      if (!$documentField.length) return;
+
+      const currentValue = $documentField.val().replace(/\D/g, "");
 
       if (documentType === "cpf") {
-        $(this).val(applyCPFMask(value));
+        $documentField.val(this.applyCPFMask(currentValue));
+        $documentField.attr("placeholder", "000.000.000-00");
+        $documentField.attr("maxlength", 14);
       } else {
-        $(this).val(applyCNPJMask(value));
+        $documentField.val(this.applyCNPJMask(currentValue));
+        $documentField.attr("placeholder", "00.000.000/0000-00");
+        $documentField.attr("maxlength", 18);
       }
-    });
-
-    // Altera a máscara quando o tipo de documento mudar
-    $('input[name="document_type"]').on("change", function () {
-      updateDocumentMask();
-    });
-
-    // Inicializa a máscara quando a página carrega
-    updateDocumentMask();
-  }
-
-  // =============================================
-  // MÁSCARAS E VALIDAÇÕES DO CHECKOUT
-  // =============================================
-
-  // Máscara para número do cartão
-  function applyCardNumberMask(value) {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})(\d{1,4})/, "$1 $2")
-      .trim()
-      .substring(0, 19);
-  }
-
-  // Máscara para validade do cartão
-  function applyCardExpiryMask(value) {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{2})(\d)/, "$1/$2")
-      .replace(/(\/\d{2})\d+?$/, "$1")
-      .substring(0, 5);
-  }
-
-  // Máscara para CVV
-  function applyCardCVVMask(value) {
-    return value.replace(/\D/g, "").substring(0, 4);
-  }
-
-  // Máscara para nome no cartão - NOVA
-  function applyCardHolderMask(value) {
-    return value.replace(/[^a-zA-ZÀ-ÿ\s]/g, "");
-  }
-
-  // Validação do número do cartão usando algoritmo de Luhn
-  function validateCardNumber(cardNumber) {
-    const cleanNumber = cardNumber.replace(/\s+/g, "");
-
-    // Verifica se tem entre 13 e 19 dígitos
-    if (!/^\d{13,19}$/.test(cleanNumber)) {
-      return false;
     }
 
-    // Algoritmo de Luhn
-    let sum = 0;
-    let isEven = false;
+    // =============================================
+    // MÁSCARAS E VALIDAÇÕES DO CHECKOUT
+    // =============================================
 
-    for (let i = cleanNumber.length - 1; i >= 0; i--) {
-      let digit = parseInt(cleanNumber.charAt(i), 10);
+    initCheckoutMasks() {
+      this.setupCardNumberMask();
+      this.setupCardExpiryMask();
+      this.setupCardCVVMask();
+      this.setupCardHolderMask();
+      this.setupInputErrorClearing();
+    }
 
-      if (isEven) {
-        digit *= 2;
-        if (digit > 9) {
-          digit -= 9;
+    setupCardNumberMask() {
+      const $cardNumber = $("#card_number");
+      if ($cardNumber.length > 0) {
+        $cardNumber.on("input", (e) => {
+          const $this = $(e.currentTarget);
+          $this.val(this.applyCardNumberMask($this.val()));
+        });
+      }
+    }
+
+    setupCardExpiryMask() {
+      const $cardExpiry = $("#card_expiry");
+      if ($cardExpiry.length > 0) {
+        $cardExpiry.on("input", (e) => {
+          const $this = $(e.currentTarget);
+          $this.val(this.applyCardExpiryMask($this.val()));
+        });
+      }
+    }
+
+    setupCardCVVMask() {
+      const $cardCVV = $("#card_cvv");
+      if ($cardCVV.length > 0) {
+        $cardCVV.on("input", (e) => {
+          const $this = $(e.currentTarget);
+          $this.val(this.applyCardCVVMask($this.val()));
+        });
+      }
+    }
+
+    setupCardHolderMask() {
+      const $cardHolder = $("#card_holder");
+      if ($cardHolder.length > 0) {
+        $cardHolder.on("input", (e) => {
+          const $this = $(e.currentTarget);
+          $this.val(this.applyCardHolderMask($this.val()));
+        });
+      }
+    }
+
+    setupInputErrorClearing() {
+      $(document).on(
+        "input",
+        "#card_number, #card_expiry, #card_cvv, #card_holder",
+        (e) => {
+          const $this = $(e.currentTarget);
+          $this.removeClass("upmkt-input-error");
+          $this.next(".upmkt-field-error").remove();
+        }
+      );
+    }
+
+    applyCardNumberMask(value) {
+      return value
+        .replace(/\D/g, "")
+        .replace(/(\d{4})(\d)/, "$1 $2")
+        .replace(/(\d{4})(\d)/, "$1 $2")
+        .replace(/(\d{4})(\d)/, "$1 $2")
+        .replace(/(\d{4})(\d{1,4})/, "$1 $2")
+        .trim()
+        .substring(0, 19);
+    }
+
+    applyCardExpiryMask(value) {
+      return value
+        .replace(/\D/g, "")
+        .replace(/(\d{2})(\d)/, "$1/$2")
+        .replace(/(\/\d{2})\d+?$/, "$1")
+        .substring(0, 5);
+    }
+
+    applyCardCVVMask(value) {
+      return value.replace(/\D/g, "").substring(0, 4);
+    }
+
+    applyCardHolderMask(value) {
+      return value.replace(/[^a-zA-ZÀ-ÿ\s]/g, "");
+    }
+
+    validateCardNumber(cardNumber) {
+      const cleanNumber = cardNumber.replace(/\s+/g, "");
+
+      if (!/^\d{13,19}$/.test(cleanNumber)) {
+        return false;
+      }
+
+      let sum = 0;
+      let isEven = false;
+
+      for (let i = cleanNumber.length - 1; i >= 0; i--) {
+        let digit = parseInt(cleanNumber.charAt(i), 10);
+
+        if (isEven) {
+          digit *= 2;
+          if (digit > 9) {
+            digit -= 9;
+          }
+        }
+
+        sum += digit;
+        isEven = !isEven;
+      }
+
+      return sum % 10 === 0;
+    }
+
+    validateCardExpiry(expiry) {
+      if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+        return false;
+      }
+
+      const [month, year] = expiry.split("/").map(Number);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear() % 100;
+      const currentMonth = currentDate.getMonth() + 1;
+
+      if (month < 1 || month > 12) {
+        return false;
+      }
+
+      if (year < currentYear) {
+        return false;
+      }
+
+      if (year === currentYear && month < currentMonth) {
+        return false;
+      }
+
+      return true;
+    }
+
+    validateCardCVV(cvv) {
+      return /^\d{3,4}$/.test(cvv);
+    }
+
+    validateCardHolder(name) {
+      const cleanName = name.trim();
+      return cleanName.length >= 2 && /^[a-zA-ZÀ-ÿ\s]+$/.test(cleanName);
+    }
+
+    validateCheckoutForm() {
+      let isValid = true;
+      const errors = [];
+
+      const $cardNumber = $("#card_number");
+      const $cardExpiry = $("#card_expiry");
+      const $cardCVV = $("#card_cvv");
+      const $cardHolder = $("#card_holder");
+
+      $(".upmkt-input-error").removeClass("upmkt-input-error");
+      $(".upmkt-field-error").remove();
+
+      // Valida número do cartão
+      if ($cardNumber.length > 0) {
+        const cardNumber = $cardNumber.val().replace(/\s+/g, "");
+        if (!cardNumber) {
+          errors.push("Número do cartão é obrigatório");
+          $cardNumber.addClass("upmkt-input-error");
+          isValid = false;
+        } else if (!this.validateCardNumber(cardNumber)) {
+          errors.push("Número do cartão inválido");
+          $cardNumber.addClass("upmkt-input-error");
+          isValid = false;
         }
       }
 
-      sum += digit;
-      isEven = !isEven;
+      // Valida validade
+      if ($cardExpiry.length > 0) {
+        const cardExpiry = $cardExpiry.val();
+        if (!cardExpiry) {
+          errors.push("Data de validade é obrigatória");
+          $cardExpiry.addClass("upmkt-input-error");
+          isValid = false;
+        } else if (!this.validateCardExpiry(cardExpiry)) {
+          errors.push("Data de validade inválida ou expirada");
+          $cardExpiry.addClass("upmkt-input-error");
+          isValid = false;
+        }
+      }
+
+      // Valida CVV
+      if ($cardCVV.length > 0) {
+        const cardCVV = $cardCVV.val();
+        if (!cardCVV) {
+          errors.push("CVV é obrigatório");
+          $cardCVV.addClass("upmkt-input-error");
+          isValid = false;
+        } else if (!this.validateCardCVV(cardCVV)) {
+          errors.push("CVV inválido");
+          $cardCVV.addClass("upmkt-input-error");
+          isValid = false;
+        }
+      }
+
+      // Valida nome no cartão
+      if ($cardHolder.length > 0) {
+        const cardHolder = $cardHolder.val().trim();
+        if (!cardHolder) {
+          errors.push("Nome no cartão é obrigatório");
+          $cardHolder.addClass("upmkt-input-error");
+          isValid = false;
+        } else if (!this.validateCardHolder(cardHolder)) {
+          errors.push("Nome no cartão deve conter apenas letras e espaços");
+          $cardHolder.addClass("upmkt-input-error");
+          isValid = false;
+        }
+      }
+
+      return { isValid, errors };
     }
 
-    return sum % 10 === 0;
-  }
+    // =============================================
+    // PROCESSAMENTO DE FORMULÁRIOS
+    // =============================================
 
-  // Validação da data de validade
-  function validateCardExpiry(expiry) {
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      return false;
+    initForms() {
+      this.initRegistrationForm();
+      this.initCheckoutForm();
     }
 
-    const [month, year] = expiry.split("/").map(Number);
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear() % 100;
-    const currentMonth = currentDate.getMonth() + 1;
+    initRegistrationForm() {
+      const $form = $("#upmkt-registration-form");
+      if ($form.length === 0) return;
 
-    // Valida mês (1-12)
-    if (month < 1 || month > 12) {
-      return false;
-    }
-
-    // Valida ano não expirado
-    if (year < currentYear) {
-      return false;
-    }
-
-    // Se ano atual, valida mês não expirado
-    if (year === currentYear && month < currentMonth) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // Validação do CVV
-  function validateCardCVV(cvv) {
-    return /^\d{3,4}$/.test(cvv);
-  }
-
-  // Validação do nome no cartão
-  function validateCardHolder(name) {
-    const cleanName = name.trim();
-    return cleanName.length >= 2 && /^[a-zA-ZÀ-ÿ\s]+$/.test(cleanName);
-  }
-
-  // Inicialização das máscaras do checkout - ATUALIZADA
-  function initCheckoutMasks() {
-    const $cardNumber = $("#card_number");
-    const $cardExpiry = $("#card_expiry");
-    const $cardCVV = $("#card_cvv");
-    const $cardHolder = $("#card_holder");
-
-    // Máscara para número do cartão
-    if ($cardNumber.length > 0) {
-      $cardNumber.on("input", function () {
-        const $this = $(this);
-        const value = $this.val();
-        const newValue = applyCardNumberMask(value);
-        $this.val(newValue);
+      $form.on("submit", (e) => {
+        e.preventDefault();
+        this.handleFormSubmission($form, "registration");
       });
     }
 
-    // Máscara para validade
-    if ($cardExpiry.length > 0) {
-      $cardExpiry.on("input", function () {
-        const $this = $(this);
-        const value = $this.val();
-        const newValue = applyCardExpiryMask(value);
-        $this.val(newValue);
+    initCheckoutForm() {
+      const $form = $("#upmkt-checkout-form");
+      if ($form.length === 0) return;
+
+      $form.on("submit", (e) => {
+        e.preventDefault();
+
+        const validation = this.validateCheckoutForm();
+        if (!validation.isValid) {
+          this.showFormErrors($form, validation.errors);
+          return;
+        }
+
+        this.handleFormSubmission($form, "checkout");
       });
     }
 
-    // Máscara para CVV
-    if ($cardCVV.length > 0) {
-      $cardCVV.on("input", function () {
-        const $this = $(this);
-        const value = $this.val();
-        const newValue = applyCardCVVMask(value);
-        $this.val(newValue);
-      });
-    }
-
-    // Máscara para nome no cartão - NOVA
-    if ($cardHolder.length > 0) {
-      $cardHolder.on("input", function () {
-        const $this = $(this);
-        const value = $this.val();
-        const newValue = applyCardHolderMask(value);
-        $this.val(newValue);
-      });
-    }
-  }
-
-  // Validação completa do formulário antes do envio
-  function validateCheckoutForm() {
-    let isValid = true;
-    const errors = [];
-
-    const $cardNumber = $("#card_number");
-    const $cardExpiry = $("#card_expiry");
-    const $cardCVV = $("#card_cvv");
-    const $cardHolder = $("#card_holder");
-
-    // Limpa erros anteriores
-    $(".upmkt-input-error").removeClass("upmkt-input-error");
-    $(".upmkt-field-error").remove();
-
-    // Valida número do cartão
-    if ($cardNumber.length > 0) {
-      const cardNumber = $cardNumber.val().replace(/\s+/g, "");
-      if (!cardNumber) {
-        errors.push("Número do cartão é obrigatório");
-        $cardNumber.addClass("upmkt-input-error");
-        isValid = false;
-      } else if (!validateCardNumber(cardNumber)) {
-        errors.push("Número do cartão inválido");
-        $cardNumber.addClass("upmkt-input-error");
-        isValid = false;
-      }
-    }
-
-    // Valida validade
-    if ($cardExpiry.length > 0) {
-      const cardExpiry = $cardExpiry.val();
-      if (!cardExpiry) {
-        errors.push("Data de validade é obrigatória");
-        $cardExpiry.addClass("upmkt-input-error");
-        isValid = false;
-      } else if (!validateCardExpiry(cardExpiry)) {
-        errors.push("Data de validade inválida ou expirada");
-        $cardExpiry.addClass("upmkt-input-error");
-        isValid = false;
-      }
-    }
-
-    // Valida CVV
-    if ($cardCVV.length > 0) {
-      const cardCVV = $cardCVV.val();
-      if (!cardCVV) {
-        errors.push("CVV é obrigatório");
-        $cardCVV.addClass("upmkt-input-error");
-        isValid = false;
-      } else if (!validateCardCVV(cardCVV)) {
-        errors.push("CVV inválido");
-        $cardCVV.addClass("upmkt-input-error");
-        isValid = false;
-      }
-    }
-
-    // Valida nome no cartão
-    if ($cardHolder.length > 0) {
-      const cardHolder = $cardHolder.val().trim();
-      if (!cardHolder) {
-        errors.push("Nome no cartão é obrigatório");
-        $cardHolder.addClass("upmkt-input-error");
-        isValid = false;
-      } else if (!validateCardHolder(cardHolder)) {
-        errors.push("Nome no cartão deve conter apenas letras e espaços");
-        $cardHolder.addClass("upmkt-input-error");
-        isValid = false;
-      }
-    }
-
-    return { isValid, errors };
-  }
-
-  // Inicializa máscaras do checkout
-  initCheckoutMasks();
-
-  // =============================================
-  // REGISTRO
-  // =============================================
-
-  // Processamento do registro
-  if ($("#upmkt-registration-form").length > 0) {
-    $("#upmkt-registration-form").on("submit", function (e) {
-      e.preventDefault();
-
-      var $form = $(this);
-      var $submit = $form.find(".upmkt-submit-button");
-      var $loading = $form.find(".upmkt-loading");
-      var $messages = $form.find(".upmkt-messages");
+    handleFormSubmission($form, formType) {
+      const $submit = $form.find(".upmkt-submit-button");
+      const $loading = $form.find(".upmkt-loading");
+      const $messages = $form.find(".upmkt-messages");
 
       $submit.prop("disabled", true);
       $loading.show();
@@ -326,127 +370,79 @@ jQuery(document).ready(function ($) {
         url: upmkt_front.ajax_url,
         type: "POST",
         data: $form.serialize(),
-        success: function (response) {
+        success: (response) => {
           if (response.success) {
-            $messages.html(
-              '<div class="upmkt-message success">' +
-                response.data.message +
-                "</div>"
-            );
-            // Recarrega a página para usuário logado acessar o checkout
-            setTimeout(function () {
-              window.location.reload();
-            }, 1500);
+            this.showFormSuccess($messages, response.data.message);
+            this.handleFormSuccess(formType, response.data);
           } else {
-            var errorHtml =
-              '<div class="upmkt-message error"><strong>Erro:</strong><ul>';
-            response.data.errors.forEach(function (error) {
-              errorHtml += "<li>" + error + "</li>";
-            });
-            errorHtml += "</ul></div>";
-
-            $messages.html(errorHtml);
+            this.showFormErrors($messages, response.data.errors);
           }
         },
-        error: function () {
-          $messages.html(
-            '<div class="upmkt-message error">' +
-              upmkt_front.i18n.error +
-              "</div>"
-          );
+        error: () => {
+          this.showFormError($messages, upmkt_front.i18n.error);
         },
-        complete: function () {
+        complete: () => {
           $submit.prop("disabled", false);
           $loading.hide();
         },
       });
-    });
-  }
+    }
 
-  // Processamento do checkout COM VALIDAÇÃO
-  if ($("#upmkt-checkout-form").length > 0) {
-    $("#upmkt-checkout-form").on("submit", function (e) {
-      e.preventDefault();
+    showFormSuccess($messages, message) {
+      $messages.html(
+        '<div class="upmkt-message success">' + message + "</div>"
+      );
+    }
 
-      // Valida o formulário antes do envio
-      const validation = validateCheckoutForm();
+    showFormError($messages, error) {
+      $messages.html('<div class="upmkt-message error">' + error + "</div>");
+    }
 
-      if (!validation.isValid) {
-        const $messages = $(this).find(".upmkt-messages");
-        let errorHtml =
-          '<div class="upmkt-message error"><strong>Erro:</strong><ul>';
-        validation.errors.forEach(function (error) {
-          errorHtml += "<li>" + error + "</li>";
-        });
-        errorHtml += "</ul></div>";
+    showFormErrors($messages, errors) {
+      let errorHtml =
+        '<div class="upmkt-message error"><strong>Erro:</strong><ul>';
+      errors.forEach((error) => {
+        errorHtml += "<li>" + error + "</li>";
+      });
+      errorHtml += "</ul></div>";
+      $messages.html(errorHtml);
+    }
 
-        $messages.html(errorHtml);
-        return;
+    handleFormSuccess(formType, data) {
+      if (formType === "registration") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else if (formType === "checkout" && data.redirect_url) {
+        setTimeout(() => {
+          window.location.href = data.redirect_url;
+        }, 2000);
+      }
+    }
+
+    // =============================================
+    // SISTEMA DE NOTIFICAÇÕES
+    // =============================================
+
+    showNotification(message, type = "success") {
+      let notification = document.getElementById("upmkt-notification");
+
+      if (!notification) {
+        notification = this.createNotificationElement();
       }
 
-      var $form = $(this);
-      var $submit = $form.find(".upmkt-submit-button");
-      var $loading = $form.find(".upmkt-loading");
-      var $messages = $form.find(".upmkt-messages");
+      const messageEl = document.getElementById("upmkt-notification-message");
+      notification.className = `upmkt-notification ${type}`;
+      messageEl.textContent = message;
+      notification.style.display = "block";
 
-      $submit.prop("disabled", true);
-      $loading.show();
-      $messages.empty();
+      setTimeout(() => {
+        this.hideNotification();
+      }, 5000);
+    }
 
-      $.ajax({
-        url: upmkt_front.ajax_url,
-        type: "POST",
-        data: $form.serialize(),
-        success: function (response) {
-          if (response.success) {
-            $messages.html(
-              '<div class="upmkt-message success">' +
-                response.data.message +
-                "</div>"
-            );
-
-            // Redireciona após sucesso
-            if (response.data.redirect_url) {
-              setTimeout(function () {
-                window.location.href = response.data.redirect_url;
-              }, 2000);
-            }
-          } else {
-            var errorHtml =
-              '<div class="upmkt-message error"><strong>Erro:</strong><ul>';
-            response.data.errors.forEach(function (error) {
-              errorHtml += "<li>" + error + "</li>";
-            });
-            errorHtml += "</ul></div>";
-
-            $messages.html(errorHtml);
-          }
-        },
-        error: function () {
-          $messages.html(
-            '<div class="upmkt-message error">' +
-              upmkt_front.i18n.error +
-              "</div>"
-          );
-        },
-        complete: function () {
-          $submit.prop("disabled", false);
-          $loading.hide();
-        },
-      });
-    });
-  }
-
-  // =============================================
-  // ÁREA DO USUÁRIO
-  // =============================================
-
-  // Sistema de Notificações
-  function upmktShowNotification(message, type = "success") {
-    // Criar notificação se não existir
-    let notification = document.getElementById("upmkt-notification");
-    if (!notification) {
-      notification = document.createElement("div");
+    createNotificationElement() {
+      const notification = document.createElement("div");
       notification.id = "upmkt-notification";
       notification.className = "upmkt-notification";
       notification.innerHTML = `
@@ -455,59 +451,71 @@ jQuery(document).ready(function ($) {
           <button type="button" class="upmkt-notification-close">&times;</button>
         </div>
       `;
+
       document.body.appendChild(notification);
 
-      // Adicionar event listener para fechar
       notification
         .querySelector(".upmkt-notification-close")
-        .addEventListener("click", upmktHideNotification);
+        .addEventListener("click", () => this.hideNotification());
+
+      return notification;
     }
 
-    const messageEl = document.getElementById("upmkt-notification-message");
-    notification.className = `upmkt-notification ${type}`;
-    messageEl.textContent = message;
-    notification.style.display = "block";
-
-    // Auto-close após 5 segundos
-    setTimeout(() => {
-      upmktHideNotification();
-    }, 5000);
-  }
-
-  function upmktHideNotification() {
-    const notification = document.getElementById("upmkt-notification");
-    if (notification) {
-      notification.style.display = "none";
+    hideNotification() {
+      const notification = document.getElementById("upmkt-notification");
+      if (notification) {
+        notification.style.display = "none";
+      }
     }
-  }
 
-  // Modal de Confirmação
-  function upmktShowConfirmModal(title, message, onConfirm) {
-    // Criar modal se não existir
-    let modal = document.getElementById("upmkt-confirm-modal");
-    if (!modal) {
-      modal = document.createElement("div");
+    // =============================================
+    // MODAL DE CONFIRMAÇÃO
+    // =============================================
+
+    showConfirmModal(title, message, onConfirm) {
+      let modal = document.getElementById("upmkt-confirm-modal");
+
+      if (!modal) {
+        modal = this.createModalElement();
+      }
+
+      document.getElementById("upmkt-confirm-title").textContent = title;
+      document.getElementById("upmkt-confirm-message").textContent = message;
+
+      modal.style.display = "flex";
+      setTimeout(() => modal.classList.add("show"), 10);
+
+      this.setupConfirmButton(modal, onConfirm);
+    }
+
+    createModalElement() {
+      const modal = document.createElement("div");
       modal.id = "upmkt-confirm-modal";
       modal.className = "upmkt-modal";
       modal.style.display = "none";
       modal.innerHTML = `
-            <div class="upmkt-modal-content">
-                <div class="upmkt-modal-header">
-                    <h3 id="upmkt-confirm-title">Confirmação</h3>
-                    <button type="button" class="upmkt-modal-close">&times;</button>
-                </div>
-                <div class="upmkt-modal-body">
-                    <p id="upmkt-confirm-message"></p>
-                </div>
-                <div class="upmkt-modal-footer">
-                    <button type="button" class="upmkt-btn upmkt-btn-secondary" id="upmkt-confirm-cancel">Cancelar</button>
-                    <button type="button" class="upmkt-btn upmkt-btn-primary" id="upmkt-confirm-ok">Confirmar</button>
-                </div>
-            </div>
-        `;
-      document.body.appendChild(modal);
+        <div class="upmkt-modal-content">
+          <div class="upmkt-modal-header">
+            <h3 id="upmkt-confirm-title">Confirmação</h3>
+            <button type="button" class="upmkt-modal-close">&times;</button>
+          </div>
+          <div class="upmkt-modal-body">
+            <p id="upmkt-confirm-message"></p>
+          </div>
+          <div class="upmkt-modal-footer">
+            <button type="button" class="upmkt-btn upmkt-btn-secondary" id="upmkt-confirm-cancel">Cancelar</button>
+            <button type="button" class="upmkt-btn upmkt-btn-primary" id="upmkt-confirm-ok">Confirmar</button>
+          </div>
+        </div>
+      `;
 
-      // Adicionar event listeners
+      document.body.appendChild(modal);
+      this.setupModalEvents(modal);
+
+      return modal;
+    }
+
+    setupModalEvents(modal) {
       const closeBtn = modal.querySelector(".upmkt-modal-close");
       const cancelBtn = document.getElementById("upmkt-confirm-cancel");
 
@@ -519,140 +527,123 @@ jQuery(document).ready(function ($) {
       closeBtn.addEventListener("click", closeModal);
       cancelBtn.addEventListener("click", closeModal);
 
-      modal.addEventListener("click", function (e) {
-        if (e.target === this) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
           closeModal();
         }
       });
     }
 
-    document.getElementById("upmkt-confirm-title").textContent = title;
-    document.getElementById("upmkt-confirm-message").textContent = message;
+    setupConfirmButton(modal, onConfirm) {
+      const confirmOk = document.getElementById("upmkt-confirm-ok");
+      const newConfirmOk = confirmOk.cloneNode(true);
+      confirmOk.parentNode.replaceChild(newConfirmOk, confirmOk);
 
-    // MOSTRAR MODAL CORRETAMENTE
-    modal.style.display = "flex";
-    setTimeout(() => modal.classList.add("show"), 10);
+      newConfirmOk.onclick = () => {
+        modal.style.display = "none";
+        modal.classList.remove("show");
+        onConfirm();
+      };
+    }
 
-    // Configurar evento de confirmação
-    const confirmOk = document.getElementById("upmkt-confirm-ok");
+    // =============================================
+    // AÇÕES DE ASSINATURA
+    // =============================================
 
-    // Remover event listeners anteriores para evitar duplicação
-    const newConfirmOk = confirmOk.cloneNode(true);
-    confirmOk.parentNode.replaceChild(newConfirmOk, confirmOk);
-
-    newConfirmOk.onclick = () => {
-      modal.style.display = "none";
-      modal.classList.remove("show");
-      onConfirm();
-    };
-  }
-
-  // Ações das Doações
-  window.upmktCancelSubscription = function (subscriptionId) {
-    upmktShowConfirmModal(
-      "Cancelar Doação",
-      "Tem certeza que deseja cancelar esta doação?\n\nApós o cancelamento, você perderá o acesso ao plano na data de vencimento. Você poderá criar uma nova doação a qualquer momento.",
-      () =>
-        upmktHandleSubscriptionAction(
+    initSubscriptionActions() {
+      // As funções são expostas para o escopo global para serem chamadas via HTML
+      window.upmktCancelSubscription = (subscriptionId) =>
+        this.handleSubscriptionAction(
+          subscriptionId,
           "upmkt_cancel_subscription",
-          subscriptionId
-        )
-    );
-  };
+          "Cancelar Doação",
+          "Tem certeza que deseja cancelar esta doação?\n\nApós o cancelamento, você perderá o acesso ao plano na data de vencimento. Você poderá criar uma nova doação a qualquer momento."
+        );
 
-  window.upmktPauseSubscription = function (subscriptionId) {
-    upmktShowConfirmModal(
-      "Pausar recorrência",
-      "Deseja pausar a recorrência?\n\nVocê manterá o acesso até a data de vencimento, mas não serão feitas novas cobranças. Após a data de vencimento, a doação será cancelada automaticamente.",
-      () =>
-        upmktHandleSubscriptionAction(
+      window.upmktPauseSubscription = (subscriptionId) =>
+        this.handleSubscriptionAction(
+          subscriptionId,
           "upmkt_pause_subscription",
-          subscriptionId
-        )
-    );
-  };
+          "Pausar recorrência",
+          "Deseja pausar a recorrência?\n\nVocê manterá o acesso até a data de vencimento, mas não serão feitas novas cobranças. Após a data de vencimento, a doação será cancelada automaticamente."
+        );
 
-  window.upmktResumeSubscription = function (subscriptionId) {
-    upmktShowConfirmModal(
-      "Retomar Recorrência",
-      "Deseja retomar a recorrência?\n\nAs cobranças serão reiniciadas a partir da próxima data de vencimento. Sua doação voltará ao estado ativo.",
-      () =>
-        upmktHandleSubscriptionAction(
+      window.upmktResumeSubscription = (subscriptionId) =>
+        this.handleSubscriptionAction(
+          subscriptionId,
           "upmkt_resume_subscription",
-          subscriptionId
-        )
-    );
-  };
+          "Retomar Recorrência",
+          "Deseja retomar a recorrência?\n\nAs cobranças serão reiniciadas a partir da próxima data de vencimento. Sua doação voltará ao estado ativo."
+        );
 
-  function upmktHandleSubscriptionAction(action, subscriptionId) {
-    const button = document.querySelector(
-      `[data-subscription-id="${subscriptionId}"][data-action="${action}"]`
-    );
-    if (!button) return;
+      window.upmktRetryPayment = (subscriptionId) =>
+        this.handleSubscriptionAction(
+          subscriptionId,
+          "upmkt_retry_payment",
+          "Efeturar pagamento",
+          "Você será redirecionado para a página de checkout para inserir os dados do cartão novamente.\n\nDeseja continuar?"
+        );
+    }
 
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML =
-      '<span class="upmkt-loading">' + upmkt_front.i18n.processing + "</span>";
+    handleSubscriptionAction(subscriptionId, action, title, message) {
+      this.showConfirmModal(title, message, () => {
+        this.processSubscriptionAction(subscriptionId, action);
+      });
+    }
 
-    $.ajax({
-      url: upmkt_front.ajax_url,
-      type: "POST",
-      data: {
-        action: action,
-        subscription_id: subscriptionId,
-        nonce: upmkt_front.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          upmktShowNotification(
-            response.data.message || "Ação realizada com sucesso!",
-            "success"
-          );
+    processSubscriptionAction(subscriptionId, action) {
+      const button = document.querySelector(
+        `[data-subscription-id="${subscriptionId}"][data-action="${action}"]`
+      );
 
-          if (response.data.redirect_url) {
-            setTimeout(() => {
-              window.location.href = response.data.redirect_url;
-            }, 1500);
+      if (!button) return;
+
+      const originalText = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = `<span class="upmkt-loading">${upmkt_front.i18n.processing}</span>`;
+
+      $.ajax({
+        url: upmkt_front.ajax_url,
+        type: "POST",
+        data: {
+          action: action,
+          subscription_id: subscriptionId,
+          nonce: upmkt_front.nonce,
+        },
+        success: (response) => {
+          if (response.success) {
+            this.showNotification(
+              response.data.message || "Ação realizada com sucesso!",
+              "success"
+            );
+
+            if (response.data.redirect_url) {
+              setTimeout(() => {
+                window.location.href = response.data.redirect_url;
+              }, 1500);
+            } else {
+              setTimeout(() => {
+                location.reload();
+              }, 1500);
+            }
           } else {
-            setTimeout(() => {
-              location.reload();
-            }, 1500);
+            this.showNotification(
+              response.data.message || upmkt_front.i18n.error,
+              "error"
+            );
+            button.disabled = false;
+            button.innerHTML = originalText;
           }
-        } else {
-          upmktShowNotification(
-            response.data.message || upmkt_front.i18n.error,
-            "error"
-          );
+        },
+        error: () => {
+          this.showNotification(upmkt_front.i18n.error, "error");
           button.disabled = false;
           button.innerHTML = originalText;
-        }
-      },
-      error: function () {
-        upmktShowNotification(upmkt_front.i18n.error, "error");
-        button.disabled = false;
-        button.innerHTML = originalText;
-      },
-    });
+        },
+      });
+    }
   }
 
-  // Fazer pagamento pendente
-  window.upmktRetryPayment = function (subscriptionId) {
-    upmktShowConfirmModal(
-      "Efeturar pagamento",
-      "Você será redirecionado para a página de checkout para inserir os dados do cartão novamente.\n\nDeseja continuar?",
-      () => upmktHandleSubscriptionAction("upmkt_retry_payment", subscriptionId)
-    );
-  };
-
-  // Limpa erros quando o usuário começa a digitar nos campos do checkout
-  $(document).on(
-    "input",
-    "#card_number, #card_expiry, #card_cvv, #card_holder",
-    function () {
-      const $this = $(this);
-      $this.removeClass("upmkt-input-error");
-      $this.next(".upmkt-field-error").remove();
-    }
-  );
+  // Inicializar a aplicação
+  new UPMktFrontend();
 });

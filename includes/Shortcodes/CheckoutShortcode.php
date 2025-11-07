@@ -48,10 +48,6 @@ class CheckoutShortcode
             return '<p>Plano não encontrado ou indisponível.</p>';
         }
 
-        // Carrega os scripts do front-end
-        wp_enqueue_style('upmkt-front-css');
-        wp_enqueue_script('upmkt-front-js');
-
         // Verifica se usuário está logado
         if (!is_user_logged_in()) {
             return $this->render_registration_form($plan_id);
