@@ -6,7 +6,7 @@ use UPMarket\Subscriptions\Entities\Subscription;
 use UPMarket\Subscriptions\Core\Logger;
 
 /**
- * Shortcode para área do cliente
+ * Shortcode para área do doador
  *
  * @package UPMarket\Subscriptions\Shortcodes
  */
@@ -25,7 +25,7 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Renderiza a área do cliente
+     * Renderiza a área do doador
      */
     public function render_customer_area($atts): string
     {
@@ -40,15 +40,18 @@ class CustomerAreaShortcode
         $user_id = get_current_user_id();
         $subscriptions = $this->get_user_subscriptions($user_id);
 
+        // Verifica se deve mostrar o botão "Doar novamente" fora do loop
+        $show_global_resubscribe_btn = $this->should_show_global_resubscribe_button($subscriptions);
+
         ob_start();
         ?>
         <div class="upmkt-customer-area">
-            <h2>Minhas Assinaturas</h2>
+            <h2>Minhas Doações</h2>
             
             <?php if (empty($subscriptions)): ?>
                 <div class="upmkt-no-subscriptions">
-                    <p>Você não possui assinaturas ativas.</p>
-                    <p><a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="button button-primary">Conhecer nossos planos</a></p>
+                    <p>Você não possui doações recorrentes ativas.</p>
+                    <p><a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="button button-primary">Conhecer nossos planos de doação</a></p>
                 </div>
             <?php else: ?>
                 <div class="upmkt-subscriptions-list">
@@ -56,6 +59,21 @@ class CustomerAreaShortcode
                         <?php $this->render_subscription_card($subscription); ?>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- BOTÃO DOAR NOVAMENTE (FORA DO LOOP) -->
+                <?php if ($show_global_resubscribe_btn): ?>
+                    <div class="upmkt-global-resubscribe">
+                        <div class="upmkt-resubscribe-content">
+                            <h3>Quer fazer uma doação novamente?</h3>
+                            <a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="upmkt-btn upmkt-btn-primary upmkt-btn-large">
+                                Doar novamente
+                            </a>
+                            <div class="upmkt-actions-info">
+                                <small>Você pode escolher o mesmo plano ou experimentar outras opções.</small>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php
@@ -63,7 +81,39 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Renderiza card de assinatura
+     * Verifica se deve mostrar o botão "Doar novamente" global
+     */
+    private function should_show_global_resubscribe_button(array $subscriptions): bool
+    {
+        if (empty($subscriptions)) {
+            return false;
+        }
+
+        $has_active_subscription = false;
+        $has_cancelled_or_expired = false;
+
+        foreach ($subscriptions as $subscription) {
+            $status = $subscription->get_status();
+
+            // Se tem qualquer doação ativa, pendente ou pausada, NÃO mostra o botão global
+            if (in_array($status, ['active', 'pending', 'paused'])) {
+                $has_active_subscription = true;
+            }
+
+            // Se tem pelo menos uma doação cancelada ou expirada
+            if (in_array($status, ['cancelled', 'expired'])) {
+                $has_cancelled_or_expired = true;
+            }
+        }
+
+        // Mostra o botão global apenas se:
+        // - NÃO tem doações ativas/pendentes/pausadas
+        // - E tem pelo menos uma doação cancelada/expirada
+        return !$has_active_subscription && $has_cancelled_or_expired;
+    }
+
+    /**
+     * Renderiza card de doação recorrente
      */
     private function render_subscription_card(Subscription $subscription): void
     {
@@ -78,174 +128,166 @@ class CustomerAreaShortcode
         $is_cancelled = $status === 'cancelled';
         $is_expired = $status === 'expired';
         $is_pending = $status === 'pending';
-        $show_new_subscription_btn = $is_cancelled || $is_expired || ($is_paused && $next_billing <= $today);
+
+        // REMOVIDO: $show_new_subscription_btn não é mais usado aqui
         ?>
-					<div class="upmkt-subscription-card">
-							<div class="upmkt-subscription-header">
-									<div class="upmkt-subscription-title">
-											<?php echo esc_html($plan_name); ?>
-									</div>
-									<div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($status); ?>">
-											<?php echo esc_html($this->get_status_text($status)); ?>
-									</div>
-							</div>
-							
-							<div class="upmkt-subscription-details">
-									<div class="upmkt-detail-item">
-											<strong>ID da Assinatura</strong>
-											#<?php echo esc_html($subscription->get_id()); ?>
-									</div>
-									
-									<div class="upmkt-detail-item">
-											<strong>Data de Início</strong>
-											<?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
-									</div>
-									
-									<?php if (!$is_pending): ?>
-									<div class="upmkt-detail-item">
-											<strong>Próxima Cobrança</strong>
-											<?php echo esc_html($next_billing->format('d/m/Y')); ?>
-									</div>
-									<?php endif; ?>
-									
-									<div class="upmkt-detail-item">
-											<strong>Valor</strong>
-											R$ <?php echo esc_html(number_format($plan->get_price(), 2, ',', '.')); ?>
-											<?php echo esc_html($this->get_billing_period_text($plan->get_billing_period())); ?>
-									</div>
-							</div>
+        <div class="upmkt-subscription-card">
+            <div class="upmkt-subscription-header">
+                <div class="upmkt-subscription-title">
+                    <?php echo esc_html($plan_name); ?>
+                </div>
+                <div class="upmkt-subscription-status upmkt-status-<?php echo esc_attr($status); ?>">
+                    <?php echo esc_html($this->get_status_text($status)); ?>
+                </div>
+            </div>
+            
+            <div class="upmkt-subscription-details">
+                <div class="upmkt-detail-item">
+                    <strong>ID da Doação</strong>
+                    #<?php echo esc_html($subscription->get_id()); ?>
+                </div>
+                
+                <div class="upmkt-detail-item">
+                    <strong>Data de Início</strong>
+                    <?php echo esc_html($subscription->get_start_date()->format('d/m/Y')); ?>
+                </div>
+                
+                <?php if (!$is_pending): ?>
+                <div class="upmkt-detail-item">
+                    <strong>Próxima Doação</strong>
+                    <?php echo esc_html($next_billing->format('d/m/Y')); ?>
+                </div>
+                <?php endif; ?>
+                
+                <div class="upmkt-detail-item">
+                    <strong>Valor</strong>
+                    R$ <?php echo esc_html(number_format($plan->get_price(), 2, ',', '.')); ?>
+                    <?php echo esc_html($this->get_billing_period_text($plan->get_billing_period())); ?>
+                </div>
+            </div>
 
-							<!-- Status Pendente: Pagamento Falhou -->
-							<?php if ($is_pending): ?>
-									<div class="upmkt-recurrence-info danger">
-											<p><strong>⚠️ Pagamento Pendente</strong></p>
-											<p>O pagamento inicial falhou. Você precisa concluir o pagamento para ativar sua assinatura.</p>
-											<p><strong>Motivo:</strong> Falha no processamento do pagamento. Verifique os dados do cartão e tente novamente.</p>
-									</div>
+            <!-- Status Pendente: Pagamento Falhou -->
+            <?php if ($is_pending): ?>
+                <div class="upmkt-recurrence-info danger">
+                    <p><strong>⚠️ Doação Pendente</strong></p>
+                    <p>O pagamento inicial falhou. Você precisa concluir o pagamento para ativar sua doação recorrente.</p>
+                    <p><strong>Motivo:</strong> Falha no processamento do pagamento. Verifique os dados do cartão e tente novamente.</p>
+                </div>
 
-							<!-- Status Ativo/Pausado/Cancelado (mantém o código original) -->
-							<?php elseif ($is_paused): ?>
-									<div class="upmkt-recurrence-info warning">
-											<p><strong>⏸️ Recorrência Pausada</strong></p>
-											<p>Você mantém o acesso até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
-											<p>Após esta data, a assinatura será cancelada automaticamente.</p>
-									</div>
-							<?php elseif ($is_active): ?>
-									<div class="upmkt-recurrence-info">
-											<p><strong>🔄 Recorrência Ativa</strong></p>
-											<p>Próxima cobrança: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
-									</div>
-							<?php elseif ($is_cancelled): ?>
-									<div class="upmkt-recurrence-info danger">
-											<p><strong>❌ Assinatura Cancelada</strong></p>
-											<p>Seu acesso será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
-									</div>
-							<?php endif; ?>
+            <!-- Status Ativo/Pausado/Cancelado (mantém o código original) -->
+            <?php elseif ($is_paused): ?>
+                <div class="upmkt-recurrence-info warning">
+                    <p><strong>⏸️ Doação Pausada</strong></p>
+                    <p>Você mantém o status de doador até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+                    <p>Após esta data, a doação recorrente será cancelada automaticamente.</p>
+                </div>
+            <?php elseif ($is_active): ?>
+                <div class="upmkt-recurrence-info">
+                    <p><strong>🔄 Doação Ativa</strong></p>
+                    <p>Próxima doação: <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong></p>
+                </div>
+            <?php elseif ($is_cancelled): ?>
+                <div class="upmkt-recurrence-info danger">
+                    <p><strong>❌ Doação Cancelada</strong></p>
+                    <p>Seu status de doador será mantido até <strong><?php echo esc_html($next_billing->format('d/m/Y')); ?></strong>.</p>
+                </div>
+            <?php endif; ?>
 
-							<!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
-							<?php if (($is_active || $is_paused) && !$is_pending): ?>
-									<div class="upmkt-payment-info">
-											<h4>💳 Informações de Pagamento</h4>
-											<p>Seus dados são armazenados de forma <strong>criptografada e segura</strong>.</p>
-											<p>Para alterar o cartão:</p>
-											<ul>
-												<li>Cancele a assinatura atual</li>
-												<li>Clique no botão "Assinar novamente"</li>
-												<li>Crie uma nova assinatura com o novo cartão</li>
-											</ul>
-									</div>
-							<?php endif; ?>
-							
-							<div class="upmkt-subscription-actions">
-									<?php if ($is_pending): ?>
-											<button class="upmkt-btn upmkt-btn-primary" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_retry_payment"
-															onclick="upmktRetryPayment(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Efeturar pagamento
-											</button>
-											
-											<button class="upmkt-btn upmkt-btn-danger" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_cancel_subscription"
-															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Cancelar
-											</button>
+            <!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
+            <?php if (($is_active || $is_paused) && !$is_pending): ?>
+                <div class="upmkt-payment-info">
+                    <h4>💳 Informações de Pagamento</h4>
+                    <p>Seus dados são armazenados de forma <strong>criptografada e segura</strong>.</p>
+                    <p>Para alterar o cartão:</p>
+                    <ul>
+                        <li>Cancele a doação atual</li>
+                        <li>Clique no botão "Doar novamente"</li>
+                        <li>Crie uma nova doação com o novo cartão</li>
+                    </ul>
+                </div>
+            <?php endif; ?>
+            
+            <div class="upmkt-subscription-actions">
+                <?php if ($is_pending): ?>
+                    <button class="upmkt-btn upmkt-btn-primary" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_retry_payment"
+                                    onclick="upmktRetryPayment(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Efetuar pagamento
+                    </button>
+                    
+                    <button class="upmkt-btn upmkt-btn-danger" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_cancel_subscription"
+                                    onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Cancelar
+                    </button>
 
-											<div class="upmkt-actions-info">
-													<small>
-															<strong>Tentar Novamente:</strong> Reenvia o pagamento com os dados do cartão já cadastrados.<br>
-															<strong>Cancelar:</strong> Remove esta assinatura pendente do seu perfil.
-													</small>
-											</div>
+                    <div class="upmkt-actions-info">
+                        <small>
+                            <strong>Tentar Novamente:</strong> Reenvia o pagamento com os dados do cartão já cadastrados.<br>
+                            <strong>Cancelar:</strong> Remove esta doação pendente do seu perfil.
+                        </small>
+                    </div>
 
-									<?php elseif ($is_active): ?>
-											<!-- Código original para status ativo -->
-											<button class="upmkt-btn upmkt-btn-warning" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_pause_subscription"
-															onclick="upmktPauseSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Pausar recorrência
-											</button>
-											
-											<button class="upmkt-btn upmkt-btn-danger" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_cancel_subscription"
-															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Cancelar
-											</button>
+                <?php elseif ($is_active): ?>
+                    <!-- Código original para status ativo -->
+                    <button class="upmkt-btn upmkt-btn-warning" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_pause_subscription"
+                                    onclick="upmktPauseSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Pausar doação
+                    </button>
+                    
+                    <button class="upmkt-btn upmkt-btn-danger" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_cancel_subscription"
+                                    onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Cancelar doação
+                    </button>
 
-											<div class="upmkt-actions-info">
-													<small>
-															<strong>Pausar:</strong> Mantém acesso até o vencimento, sem novas cobranças. Após o vencimento, cancela automaticamente.<br>
-															<strong>Cancelar:</strong> Encerra definitivamente na data de vencimento. Você pode criar uma nova assinatura a qualquer momento.
-													</small>
-											</div>
+                    <div class="upmkt-actions-info">
+                        <small>
+                            <strong>Pausar:</strong> Mantém status de doador até o vencimento, sem novas cobranças. Após o vencimento, cancela automaticamente.<br>
+                            <strong>Cancelar:</strong> Encerra definitivamente na data de vencimento. Você pode fazer uma nova doação a qualquer momento.
+                        </small>
+                    </div>
 
-									<?php elseif ($is_paused): ?>
-											<!-- Código original para status pausado -->
-											<button class="upmkt-btn upmkt-btn-success" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_resume_subscription"
-															onclick="upmktResumeSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Retomar recorrência
-											</button>
-											
-											<button class="upmkt-btn upmkt-btn-danger" 
-															data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
-															data-action="upmkt_cancel_subscription"
-															onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
-													Cancelar
-											</button>
+                <?php elseif ($is_paused): ?>
+                    <!-- Código original para status pausado -->
+                    <button class="upmkt-btn upmkt-btn-success" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_resume_subscription"
+                                    onclick="upmktResumeSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Retomar doação
+                    </button>
+                    
+                    <button class="upmkt-btn upmkt-btn-danger" 
+                                    data-subscription-id="<?php echo esc_attr($subscription->get_id()); ?>"
+                                    data-action="upmkt_cancel_subscription"
+                                    onclick="upmktCancelSubscription(<?php echo esc_attr($subscription->get_id()); ?>)">
+                            Cancelar doação
+                    </button>
 
-											<div class="upmkt-actions-info">
-													<small>Retome a recorrência para continuar com o plano após <?php echo esc_html($next_billing->format('d/m/Y')); ?>, ou cancele para encerrar definitivamente.</small>
-											</div>
+                    <div class="upmkt-actions-info">
+                        <small>Retome a doação para continuar como doador após <?php echo esc_html($next_billing->format('d/m/Y')); ?>, ou cancele para encerrar definitivamente.</small>
+                    </div>
 
-									<?php elseif ($is_cancelled && $next_billing > $today): ?>
-											<!-- Assinatura Cancelada mas ainda ativa -->
-											<div class="upmkt-actions-info">
-													<small>Assinatura cancelada. Acesso mantido até <?php echo esc_html($next_billing->format('d/m/Y')); ?>.</small>
-											</div>
+                <?php elseif ($is_cancelled && $next_billing > $today): ?>
+                    <!-- Doação Cancelada mas ainda ativa -->
+                    <div class="upmkt-actions-info">
+                        <small>Doação cancelada. Status de doador mantido até <?php echo esc_html($next_billing->format('d/m/Y')); ?>.</small>
+                    </div>
 
-									<?php endif; ?>
+                <?php endif; ?>
 
-									<!-- Botão para nova assinatura -->
-									<?php if ($show_new_subscription_btn): ?>
-											<a href="<?php echo esc_url(get_plans_page('planos')); ?>" class="upmkt-btn upmkt-btn-primary">
-													Assinar novamente
-											</a>
-											<div class="upmkt-actions-info">
-													<small>Crie uma nova assinatura para continuar aproveitando nossos serviços. Você pode escolher o mesmo plano ou experimentar outras opções.</small>
-											</div>
-									<?php endif; ?>
-							</div>
-					</div>
-				<?php
+            </div>
+        </div>
+        <?php
     }
 
     /**
-     * Retorna assinaturas do usuário
+     * Retorna doações recorrentes do usuário
      */
     private function get_user_subscriptions(int $user_id): array
     {
@@ -316,17 +358,17 @@ class CustomerAreaShortcode
                 </svg>
             </div>
             
-            <h2>Assinatura Criada com Sucesso!</h2>
+            <h2>Doação Recorrente Criada com Sucesso!</h2>
             
             <div class="upmkt-success-message">
-                <p>Sua assinatura foi criada e ativada com sucesso.</p>
+                <p>Sua doação recorrente foi criada e ativada com sucesso.</p>
                 
                 <?php if ($subscription_id): ?>
-                    <p><strong>ID da Assinatura:</strong> #<?php echo esc_html($subscription_id); ?></p>
+                    <p><strong>ID da Doação:</strong> #<?php echo esc_html($subscription_id); ?></p>
                 <?php endif; ?>
                 
                 <p>Você receberá um e-mail de confirmação em breve.</p>
-                <p>Acesse sua <strong>Área do Cliente</strong> para gerenciar sua assinatura.</p>
+                <p>Acesse sua <strong>Área do Doador</strong> para gerenciar sua doação recorrente.</p>
             </div>
             
             <div class="upmkt-success-actions">
@@ -347,73 +389,73 @@ class CustomerAreaShortcode
     {
         ob_start();
         ?>
-					<div class="upmkt-login-required">
-							<div class="upmkt-login-container">
-									<h3>Acesse sua conta</h3>
-									<p>Faça login para gerenciar suas assinaturas.</p>
-									
-									<!-- FORMULÁRIO PADRÃO WORDPRESS COM CLASSES PERSONALIZADAS -->
-									<form name="upmkt-login-form" id="upmkt-login-form" class="upmkt-login-form" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">
-											<div class="upmkt-form-group">
-													<input type="text" 
-																name="log" 
-																id="user_login" 
-																class="input" 
-																value="" 
-																size="20" 
-																required 
-																placeholder="e-mail">
-											</div>
-											
-											<div class="upmkt-form-group">
-													<input type="password" 
-																name="pwd" 
-																id="user_pass" 
-																class="input" 
-																value="" 
-																size="20" 
-																required 
-																placeholder="senha">
-											</div>
-											
-											<div class="upmkt-remember-me">
-													<input name="rememberme" type="checkbox" id="rememberme" value="forever">
-													<p>Manter conectado</p>
-											</div>
-											
-											<div class="upmkt-form-group">
-													<input type="submit" 
-																name="wp-submit" 
-																id="wp-submit" 
-																class="upmkt-btn upmkt-btn-primary upmkt-submit-button" 
-																value="Entrar">
-													
-													<!-- Campos hidden importantes -->
-													<input type="hidden" name="redirect_to" value="<?php echo esc_url(get_permalink()); ?>">
-											</div>
-											
-											<div class="upmkt-login-links">
-													<p>
-															<a href="<?php echo esc_url(wp_lostpassword_url()); ?>" class="upmkt-link">
-																	Esqueceu sua senha?
-															</a>
-													</p>
-													<p>
-															Não tem uma conta? 
-															<a href="<?php echo esc_url(home_url('/planos')); ?>" class="upmkt-link">
-																	Assine agora
-															</a>
-													</p>
-											</div>
-									</form>
-							</div>
-					</div>
-				<?php
+                    <div class="upmkt-login-required">
+                            <div class="upmkt-login-container">
+                                    <h3>Acesse sua conta</h3>
+                                    <p>Faça login para gerenciar suas doações recorrentes.</p>
+                                    
+                                    <!-- FORMULÁRIO PADRÃO WORDPRESS COM CLASSES PERSONALIZADAS -->
+                                    <form name="upmkt-login-form" id="upmkt-login-form" class="upmkt-login-form" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">
+                                            <div class="upmkt-form-group">
+                                                    <input type="text" 
+                                                                name="log" 
+                                                                id="user_login" 
+                                                                class="input" 
+                                                                value="" 
+                                                                size="20" 
+                                                                required 
+                                                                placeholder="e-mail">
+                                            </div>
+                                            
+                                            <div class="upmkt-form-group">
+                                                    <input type="password" 
+                                                                name="pwd" 
+                                                                id="user_pass" 
+                                                                class="input" 
+                                                                value="" 
+                                                                size="20" 
+                                                                required 
+                                                                placeholder="senha">
+                                            </div>
+                                            
+                                            <div class="upmkt-remember-me">
+                                                    <input name="rememberme" type="checkbox" id="rememberme" value="forever">
+                                                    <p>Manter conectado</p>
+                                            </div>
+                                            
+                                            <div class="upmkt-form-group">
+                                                    <input type="submit" 
+                                                                name="wp-submit" 
+                                                                id="wp-submit" 
+                                                                class="upmkt-btn upmkt-btn-primary upmkt-submit-button" 
+                                                                value="Entrar">
+                                                    
+                                                    <!-- Campos hidden importantes -->
+                                                    <input type="hidden" name="redirect_to" value="<?php echo esc_url(get_permalink()); ?>">
+                                            </div>
+                                            
+                                            <div class="upmkt-login-links">
+                                                    <p>
+                                                            <a href="<?php echo esc_url(wp_lostpassword_url()); ?>" class="upmkt-link">
+                                                                    Esqueceu sua senha?
+                                                            </a>
+                                                    </p>
+                                                    <p>
+                                                            Não tem uma conta? 
+                                                            <a href="<?php echo esc_url(home_url('/planos')); ?>" class="upmkt-link">
+                                                                    Faça uma doação agora
+                                                            </a>
+                                                    </p>
+                                            </div>
+                                    </form>
+                            </div>
+                    </div>
+                <?php
         return ob_get_clean();
     }
 
     /**
-     * Cancela assinatura via AJAX
+     * Cancela doação recorrente via AJAX
      */
     public function cancel_subscription(): void
     {
@@ -428,7 +470,7 @@ class CustomerAreaShortcode
         $user_id = get_current_user_id();
 
         if (!$subscription_id) {
-            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            wp_send_json_error(['message' => 'Doação não especificada']);
             return;
         }
 
@@ -436,7 +478,7 @@ class CustomerAreaShortcode
             $subscription = new Subscription($subscription_id);
 
             if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
-                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                wp_send_json_error(['message' => 'Doação não encontrada']);
                 return;
             }
 
@@ -444,9 +486,9 @@ class CustomerAreaShortcode
             $result = $subscription_manager->cancel_subscription($subscription, 'user_request');
 
             if ($result) {
-                wp_send_json_success(['message' => 'Assinatura cancelada com sucesso. Seu acesso será mantido até ' . $subscription->get_next_billing_date()->format('d/m/Y') . '. Você pode criar uma nova assinatura a qualquer momento.']);
+                wp_send_json_success(['message' => 'Doação cancelada com sucesso. Seu status de doador será mantido até ' . $subscription->get_next_billing_date()->format('d/m/Y') . '. Você pode fazer uma nova doação a qualquer momento.']);
             } else {
-                wp_send_json_error(['message' => 'Erro ao cancelar assinatura']);
+                wp_send_json_error(['message' => 'Erro ao cancelar doação']);
             }
 
         } catch (\Exception $e) {
@@ -456,7 +498,7 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Pausa assinatura via AJAX
+     * Pausa doação recorrente via AJAX
      */
     public function pause_subscription(): void
     {
@@ -471,7 +513,7 @@ class CustomerAreaShortcode
         $user_id = get_current_user_id();
 
         if (!$subscription_id) {
-            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            wp_send_json_error(['message' => 'Doação não especificada']);
             return;
         }
 
@@ -479,7 +521,7 @@ class CustomerAreaShortcode
             $subscription = new Subscription($subscription_id);
 
             if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
-                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                wp_send_json_error(['message' => 'Doação não encontrada']);
                 return;
             }
 
@@ -487,9 +529,9 @@ class CustomerAreaShortcode
             $result = $subscription_manager->pause_subscription($subscription, 'user_request');
 
             if ($result) {
-                wp_send_json_success(['message' => 'Recorrência pausada com sucesso. Você mantém o acesso até ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
+                wp_send_json_success(['message' => 'Doação pausada com sucesso. Você mantém o status de doador até ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
             } else {
-                wp_send_json_error(['message' => 'Erro ao pausar recorrência']);
+                wp_send_json_error(['message' => 'Erro ao pausar doação']);
             }
 
         } catch (\Exception $e) {
@@ -499,7 +541,7 @@ class CustomerAreaShortcode
     }
 
     /**
-     * Retoma assinatura via AJAX
+     * Retoma doação recorrente via AJAX
      */
     public function resume_subscription(): void
     {
@@ -514,7 +556,7 @@ class CustomerAreaShortcode
         $user_id = get_current_user_id();
 
         if (!$subscription_id) {
-            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            wp_send_json_error(['message' => 'Doação não especificada']);
             return;
         }
 
@@ -522,7 +564,7 @@ class CustomerAreaShortcode
             $subscription = new Subscription($subscription_id);
 
             if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
-                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                wp_send_json_error(['message' => 'Doação não encontrada']);
                 return;
             }
 
@@ -530,9 +572,9 @@ class CustomerAreaShortcode
             $result = $subscription_manager->resume_subscription($subscription, 'user_request');
 
             if ($result) {
-                wp_send_json_success(['message' => 'Recorrência retomada com sucesso! Próxima cobrança: ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
+                wp_send_json_success(['message' => 'Doação retomada com sucesso! Próxima doação: ' . $subscription->get_next_billing_date()->format('d/m/Y')]);
             } else {
-                wp_send_json_error(['message' => 'Erro ao retomar recorrência']);
+                wp_send_json_error(['message' => 'Erro ao retomar doação']);
             }
 
         } catch (\Exception $e) {
@@ -557,7 +599,7 @@ class CustomerAreaShortcode
         $user_id = get_current_user_id();
 
         if (!$subscription_id) {
-            wp_send_json_error(['message' => 'Assinatura não especificada']);
+            wp_send_json_error(['message' => 'Doação não especificada']);
             return;
         }
 
@@ -565,16 +607,16 @@ class CustomerAreaShortcode
             $subscription = new Subscription($subscription_id);
 
             if (!$subscription->exists() || $subscription->get_user_id() !== $user_id) {
-                wp_send_json_error(['message' => 'Assinatura não encontrada']);
+                wp_send_json_error(['message' => 'Doação não encontrada']);
                 return;
             }
 
             if ($subscription->get_status() !== 'pending') {
-                wp_send_json_error(['message' => 'Esta assinatura não está pendente de pagamento']);
+                wp_send_json_error(['message' => 'Esta doação não está pendente de pagamento']);
                 return;
             }
 
-            // Obtém o ID do plano da assinatura pendente
+            // Obtém o ID do plano da doação pendente
             $plan_id = $subscription->get_plan_id();
 
             // Obtém a URL do checkout com o plano
