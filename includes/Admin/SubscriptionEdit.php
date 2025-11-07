@@ -37,7 +37,7 @@ class SubscriptionEdit
         }
 
         // Verificar nonce para ações destrutivas
-        if (in_array($action, ['cancel', 'delete'])) {
+        if (in_array($action, ['cancel', 'delete', 'refresh'])) {
             $nonce = $_GET['_wpnonce'] ?? '';
             if (!wp_verify_nonce($nonce, $action . '_subscription_' . $subscription_id)) {
                 wp_die('Erro de segurança.');
@@ -52,23 +52,21 @@ class SubscriptionEdit
 
         switch ($action) {
             case 'edit':
-                // A página de edição será renderizada
                 break;
-
             case 'cancel':
                 $this->handle_cancel_subscription($subscription);
                 break;
-
             case 'resume':
                 $this->handle_resume_subscription($subscription);
                 break;
-
             case 'delete':
                 $this->handle_delete_subscription($subscription);
                 break;
-
             case 'update':
                 $this->handle_update_subscription($subscription);
+                break;
+            case 'refresh':
+                $this->handle_refresh_subscription($subscription);
                 break;
         }
     }
@@ -399,33 +397,37 @@ class SubscriptionEdit
     }
 
     /**
-     * Renderiza ações rápidas
+     * Renderiza ações rápidas - ATUALIZADO
      */
     private function render_quick_actions(Subscription $subscription): void
     {
         ?>
-        <div class="upmkt-card">
-            <h3>Ações Rápidas</h3>
-            
-            <div class="upmkt-quick-actions">
-                <?php if ($subscription->get_status() !== 'cancelled'): ?>
-                    <a href="<?php echo esc_url(wp_nonce_url(
-                        admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $subscription->get_id()),
-                        'cancel_subscription_' . $subscription->get_id()
-                    )); ?>" 
-                       class="button" style="width:100%; margin-bottom:5px; color:#dd3a49; background:#ffb3b3; border-color:#dd3a49;"
-                       onclick="return confirm('Cancelar esta doação?')">
-                       🚫 Cancelar
-                    </a>
-                <?php endif; ?>
+					<div class="upmkt-card">
+							<h3>Ações Rápidas</h3>
+							
+							<div class="upmkt-quick-actions">
+									<?php if ($subscription->get_status() !== 'cancelled'): ?>
+											<a href="<?php echo esc_url(wp_nonce_url(
+											    admin_url('admin.php?page=upmkt-subscriptions-list&action=cancel&subscription_id=' . $subscription->get_id()),
+											    'cancel_subscription_' . $subscription->get_id()
+											)); ?>" 
+												class="button" style="width:100%; margin-bottom:5px; color:#dd3a49; background:#ffb3b3; border-color:#dd3a49;"
+												onclick="return confirm('Cancelar esta doação?')">
+												🚫 Cancelar
+											</a>
+									<?php endif; ?>
 
-                <a href="<?php echo esc_url(admin_url('admin.php?page=upmkt-subscriptions-list&action=refresh&subscription_id=' . $subscription->get_id())); ?>" 
-                   class="button button-secondary" style="width:100%; margin-bottom:5px;">
-                   🔄 Sincronizar com Gateway
-                </a>
-            </div>
-        </div>
-        <?php
+									<!-- CORREÇÃO: Link atualizado com nonce para manter na página de edição -->
+									<a href="<?php echo esc_url(wp_nonce_url(
+									    admin_url('admin.php?page=upmkt-subscriptions-list&action=refresh&subscription_id=' . $subscription->get_id()),
+									    'refresh_subscription_' . $subscription->get_id()
+									)); ?>" 
+										class="button button-secondary" style="width:100%; margin-bottom:5px;">
+										🔄 Sincronizar com Gateway
+									</a>
+							</div>
+					</div>
+				<?php
     }
 
     /**
@@ -542,6 +544,42 @@ class SubscriptionEdit
     }
 
     /**
+     * Manipula sincronização com gateway - CORRIGIDO
+     */
+    private function handle_refresh_subscription(Subscription $subscription): void
+    {
+        try {
+            $success = $this->sync_subscription_with_gateway($subscription);
+
+            if ($success) {
+                $this->log_activity(
+                    $subscription->get_id(),
+                    'Doação sincronizada com gateway com sucesso',
+                    ['admin_id' => get_current_user_id()]
+                );
+
+                // CORREÇÃO: Redireciona para a página de edição atual com mensagem de sucesso
+                wp_safe_redirect(esc_url_raw(
+                    admin_url('admin.php?page=upmkt-subscriptions-list&action=edit&subscription_id=' . $subscription->get_id() . '&message=synced')
+                ));
+            } else {
+                // CORREÇÃO: Redireciona para a página de edição atual com mensagem de falha
+                wp_safe_redirect(esc_url_raw(
+                    admin_url('admin.php?page=upmkt-subscriptions-list&action=edit&subscription_id=' . $subscription->get_id() . '&message=sync_failed')
+                ));
+            }
+            exit;
+
+        } catch (\Exception $e) {
+            // CORREÇÃO: Redireciona para a página de edição atual com mensagem de erro específica
+            wp_safe_redirect(esc_url_raw(
+                admin_url('admin.php?page=upmkt-subscriptions-list&action=edit&subscription_id=' . $subscription->get_id() . '&message=sync_failed&error=' . urlencode($e->getMessage()))
+            ));
+            exit;
+        }
+    }
+
+    /**
      * Manipula cancelamento
      */
     private function handle_cancel_subscription(Subscription $subscription): void
@@ -637,6 +675,93 @@ class SubscriptionEdit
     }
 
     /**
+     * Sincroniza assinatura com gateway
+     */
+    private function sync_subscription_with_gateway(Subscription $subscription): bool
+    {
+        $gateway_id = $subscription->get_meta('gateway_id', 'rede');
+
+        // Buscar o ID da transação inicial (que sempre deve existir)
+        $transaction_id = $subscription->get_meta('initial_transaction_id');
+
+        if (empty($transaction_id)) {
+            throw new \Exception(
+                'ID da transação não encontrado. ' .
+                'Esta assinatura pode não ter sido processada completamente no gateway.'
+            );
+        }
+
+        // Obter o gateway
+        $gateway_manager = \UPMarket\Subscriptions\Core\GatewayManager::instance();
+        $gateway = $gateway_manager->get_gateway($gateway_id);
+
+        if (!$gateway) {
+            throw new \Exception("Gateway {$gateway_id} não encontrado.");
+        }
+
+        if (!$gateway->is_configured()) {
+            throw new \Exception("Gateway {$gateway_id} não está configurado corretamente.");
+        }
+
+        // Buscar status da transação
+        $status_result = $gateway->get_subscription_status($transaction_id);
+
+        if ($status_result['success']) {
+            // Atualizar status local baseado no status do gateway
+            $this->update_subscription_from_gateway($subscription, $status_result['data']);
+            return true;
+        } else {
+            throw new \Exception($status_result['message']);
+        }
+    }
+
+    /**
+     * Atualiza assinatura com dados do gateway
+     */
+    private function update_subscription_from_gateway(Subscription $subscription, array $gateway_data): void
+    {
+        $old_status = $subscription->get_status();
+        $new_status = $gateway_data['status'] ?? $old_status;
+        $gateway_status = $gateway_data['gateway_status'] ?? 'unknown';
+        $message = $gateway_data['message'] ?? '';
+
+        if ($new_status !== $old_status) {
+            $subscription->set_status($new_status);
+            $subscription->set_meta('last_sync_date', current_time('mysql'));
+            $subscription->set_meta('gateway_status', $gateway_status);
+            $subscription->set_meta('last_sync_message', $message);
+            $subscription->save();
+
+            // Log da mudança de status
+            $this->log_activity(
+                $subscription->get_id(),
+                "Status sincronizado com gateway: {$old_status} → {$new_status}",
+                [
+                    'admin_id' => get_current_user_id(),
+                    'gateway_status' => $gateway_status,
+                    'message' => $message
+                ]
+            );
+        } else {
+            // Apenas atualiza metadados se o status não mudou
+            $subscription->set_meta('last_sync_date', current_time('mysql'));
+            $subscription->set_meta('gateway_status', $gateway_status);
+            $subscription->set_meta('last_sync_message', $message);
+            $subscription->save();
+
+            $this->log_activity(
+                $subscription->get_id(),
+                "Sincronização realizada - Status mantido: {$old_status}",
+                [
+                    'admin_id' => get_current_user_id(),
+                    'gateway_status' => $gateway_status,
+                    'message' => $message
+                ]
+            );
+        }
+    }
+
+    /**
      * Registra atividade
      */
     private function log_activity(int $subscription_id, string $description, array $data = []): void
@@ -691,21 +816,30 @@ class SubscriptionEdit
     }
 
     /**
-     * Renderiza notificações
+     * Renderiza notificações administrativas - ATUALIZADO
      */
-    private function render_admin_notices(): void
+    public function render_admin_notices(): void
     {
         if (isset($_GET['message'])) {
             $messages = [
                 'updated' => 'Doação atualizada com sucesso!',
                 'cancelled' => 'Doação cancelada com sucesso!',
                 'resumed' => 'Doação retomada com sucesso!',
-                'deleted' => 'Doação excluída com sucesso!'
+                'deleted' => 'Doação excluída com sucesso!',
+                'synced' => 'Doação sincronizada com o gateway com sucesso!',
+                'sync_failed' => 'Falha ao sincronizar doação com o gateway.'
             ];
 
             $message = $messages[$_GET['message']] ?? 'Ação realizada com sucesso!';
 
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            // Se houver erro específico, adiciona detalhes
+            if ($_GET['message'] === 'sync_failed' && !empty($_GET['error'])) {
+                $message .= '<br><strong>Detalhes:</strong> ' . esc_html($_GET['error']);
+            }
+
+            $type = ($_GET['message'] === 'sync_failed') ? 'error' : 'success';
+
+            echo '<div class="notice notice-' . esc_attr($type) . ' is-dismissible"><p>' . $message . '</p></div>';
         }
     }
 

@@ -33,6 +33,22 @@ if (!function_exists('upmkt_get_current_datetime')) {
     }
 }
 
+if (! function_exists('upmkt_build_reference')) {
+    /**
+     * Gera o reference a ser enviado para a API.
+     *
+     * @param object $subscription Objeto da assinatura (deve ter o método get_id()).
+     * @return string Reference gerado, com no máximo 50 caracteres.
+     */
+    function upmkt_build_reference($subscription_id): string
+    {
+        $ID = (int) $subscription_id;
+        $reference = sprintf('subs%ddate%s', $ID, upmkt_get_current_timestamp());
+
+        return substr($reference, 0, 50);
+    }
+}
+
 /**
  * Gera um nome de arquivo para exportação de doações
  *

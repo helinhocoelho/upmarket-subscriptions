@@ -190,7 +190,7 @@ class SubscriptionManager
                 $plan = new \UPMarket\Subscriptions\Entities\SubscriptionPlan($subscription->get_plan_id());
                 $next_billing_date = $this->calculate_next_billing_date($plan);
 
-                $subscription->set_prop('next_billing_date', $next_billing_date);
+                $subscription->set_next_billing_date($next_billing_date);
                 $subscription->set_meta('last_payment_date', current_time('mysql'));
                 $subscription->set_meta('last_transaction_id', $payment_result['transaction_id']);
                 $subscription->save();

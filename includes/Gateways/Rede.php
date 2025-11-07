@@ -61,13 +61,20 @@ class Rede extends AbstractPaymentGateway
         }
 
         try {
-            $transaction_data = $this->prepare_transaction_data($payment_data, $subscription);
+            $transaction_data = $this->prepare_initial_transaction_data($payment_data, $subscription);
             $response = $this->create_transaction($transaction_data);
 
             if ($response['success']) {
-                $this->save_card_token($subscription, $response['card_token'] ?? '');
+                // ⭐ SALVAR BRANDTID E ÚLTIMOS 4 DÍGITOS
+                $subscription->set_meta('rede_brand_tid', $response['brand_tid']);
+                $subscription->set_meta('card_last_four', $response['last_four']);
+                $subscription->set_meta('gateway_subscription_id', $response['transaction_id']);
+
+                // ⭐ SALVAR TUDO DE UMA VEZ
+                $subscription->save();
+
                 Logger::instance()->info(
-                    "Initial payment successful for subscription {$subscription->get_id()}",
+                    "Initial payment successful - BrandTid: {$response['brand_tid']}, Last four: {$response['last_four']} for subscription {$subscription->get_id()}",
                     'gateways'
                 );
                 return $this->success_response($response);
@@ -96,14 +103,13 @@ class Rede extends AbstractPaymentGateway
             'gateways'
         );
 
-        $card_token = $subscription->get_meta('rede_card_token');
-        if (empty($card_token)) {
-            return $this->error_response(['Token do cartão não encontrado para cobrança recorrente']);
+        $brand_tid = $subscription->get_meta('rede_brand_tid');
+        if (empty($brand_tid)) {
+            return $this->error_response(['BrandTid não encontrado para cobrança recorrente']);
         }
 
         try {
-            $amount = $this->get_subscription_amount($subscription);
-            $transaction_data = $this->prepare_recurring_transaction_data($subscription, $amount, $card_token);
+            $transaction_data = $this->prepare_recurring_transaction_data($subscription);
             $response = $this->create_transaction($transaction_data);
 
             if ($response['success']) {
@@ -348,51 +354,6 @@ class Rede extends AbstractPaymentGateway
      */
 
     /**
-     * Prepara dados da transação inicial
-     */
-    private function prepare_transaction_data(array $payment_data, SubscriptionInterface $subscription): array
-    {
-        $amount = $this->get_subscription_amount($subscription);
-        $reference = substr('subs'.$subscription->get_id().'date'.upmkt_get_current_timestamp(), 0, 50);
-
-        return [
-            'capture' => true,
-            'kind' => 'credit',
-            'reference' => $reference,
-            'amount' => (int)($amount * 100),
-            'installments' => 1,
-            'cardholderName' => $payment_data['card_holder'],
-            'cardNumber' => preg_replace('/\s+/', '', $payment_data['card_number']),
-            'expirationMonth' => substr($payment_data['card_expiry'], 0, 2),
-            'expirationYear' => '20' . substr($payment_data['card_expiry'], 3, 2),
-            'securityCode' => $payment_data['card_cvv'],
-            'subscription' => true,
-            'origin' => 1,
-            'softDescriptor' => 'UP Market Sub'
-        ];
-    }
-
-    /**
-     * Prepara dados para transação recorrente
-     */
-    private function prepare_recurring_transaction_data(SubscriptionInterface $subscription, float $amount, string $card_token): array
-    {
-        $reference = substr('subs'.$subscription->get_id().'date'.upmkt_get_current_timestamp(), 0, 50);
-
-        return [
-            'capture' => true,
-            'kind' => 'credit',
-            'reference' => $reference,
-            'amount' => (int)($amount * 100),
-            'currency' => 'BRL',
-            'cardToken' => $card_token,
-            'subscription' => [
-                'subscriptionId' => (string)$subscription->get_id()
-            ]
-        ];
-    }
-
-    /**
      * Obtém valor da doação
      */
     private function get_subscription_amount(SubscriptionInterface $subscription): float
@@ -584,33 +545,6 @@ class Rede extends AbstractPaymentGateway
     }
 
     /**
-     * Parse da resposta da API
-     */
-    private function parse_api_response($response): array
-    {
-        $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
-        $status_code = wp_remote_retrieve_response_code($response);
-
-        Logger::instance()->debug('Rede API Response: ' . $body, 'gateways');
-
-        if ($status_code === 200 || $status_code === 201) {
-            return [
-                'success' => true,
-                'transaction_id' => $result['tid'] ?? '',
-                'card_token' => $result['cardToken'] ?? '',
-                'message' => $result['returnMessage'] ?? 'Transação criada com sucesso'
-            ];
-        }
-
-        return [
-            'success' => false,
-            'message' => $result['returnMessage'] ?? 'Erro na transação',
-            'error_code' => $result['returnCode'] ?? ''
-        ];
-    }
-
-    /**
      * =========================================================================
      * WEBHOOK HANDLERS ATUALIZADOS
      * =========================================================================
@@ -680,4 +614,230 @@ class Rede extends AbstractPaymentGateway
         Logger::instance()->info("Transaction captured: {$transaction_id}", 'webhooks');
         do_action('upmkt_rede_transaction_captured', $transaction_id, $data);
     }
+
+    /**
+     * Busca status da assinatura no gateway (via transações)
+     */
+    public function get_subscription_status(string $transaction_id): array
+    {
+        try {
+            // Usa o endpoint de transações que sabemos que funciona
+            $url = $this->api_url . '/v1/transactions/' . $transaction_id;
+
+            $response = wp_remote_get($url, [
+                'headers' => $this->get_api_headers(),
+                'timeout' => 15
+            ]);
+
+            if (is_wp_error($response)) {
+                throw new \Exception($response->get_error_message());
+            }
+
+            $status_code = wp_remote_retrieve_response_code($response);
+            $body = wp_remote_retrieve_body($response);
+            $result = json_decode($body, true);
+
+            Logger::instance()->debug("Rede Status Check Response - Code: {$status_code}, Body: {$body}", 'gateways');
+
+            if ($status_code === 200) {
+                $gateway_status = $result['authorization']['status'] ?? 'unknown';
+                $return_message = $result['returnMessage'] ?? '';
+
+                // Mapear status da Rede para status do plugin
+                $status_mapping = [
+                    'approved' => 'active',
+                    'denied' => 'cancelled',
+                    'canceled' => 'cancelled',
+                    'pending' => 'pending',
+                    'confirmed' => 'active'
+                ];
+
+                $local_status = $status_mapping[$gateway_status] ?? $gateway_status;
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'status' => $local_status,
+                        'gateway_status' => $gateway_status,
+                        'message' => $return_message,
+                        'transaction_id' => $result['tid'] ?? $transaction_id
+                    ]
+                ];
+            }
+
+            // Tratamento de erros específicos
+            if ($status_code === 403) {
+                return [
+                    'success' => false,
+                    'message' => 'Acesso negado à API da Rede. Verifique as credenciais (PV e Token).'
+                ];
+            }
+
+            if ($status_code === 404) {
+                return [
+                    'success' => false,
+                    'message' => 'Transação não encontrada na Rede. ID: ' . $transaction_id
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $result['returnMessage'] ?? "Erro HTTP {$status_code} na API da Rede"
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Erro na comunicação com a Rede: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Fallback para buscar status via endpoint de transações
+     */
+    private function get_transaction_status_fallback(string $transaction_id): array
+    {
+        try {
+            $url = $this->api_url . '/v1/transactions/' . $transaction_id;
+
+            $response = wp_remote_get($url, [
+                'headers' => $this->get_api_headers(),
+                'timeout' => 15
+            ]);
+
+            if (is_wp_error($response)) {
+                throw new \Exception($response->get_error_message());
+            }
+
+            $body = wp_remote_retrieve_body($response);
+            $result = json_decode($body, true);
+            $status_code = wp_remote_retrieve_response_code($response);
+
+            if ($status_code === 200) {
+                $gateway_status = $result['authorization']['status'] ?? 'unknown';
+
+                // Mapear status da transação para status de assinatura
+                $status_mapping = [
+                    'approved' => 'active',
+                    'denied' => 'cancelled',
+                    'canceled' => 'cancelled',
+                    'pending' => 'pending'
+                ];
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'status' => $status_mapping[$gateway_status] ?? $gateway_status,
+                        'next_billing_date' => null, // Não disponível via transação
+                        'current_period_end' => null
+                    ]
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $result['returnMessage'] ?? "Erro ao buscar transação"
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Prepara dados da transação inicial (storageCard=1)
+     */
+    private function prepare_initial_transaction_data(array $payment_data, SubscriptionInterface $subscription): array
+    {
+        $amount = $this->get_subscription_amount($subscription);
+        $reference = upmkt_build_reference($subscription->get_id());
+
+        return [
+            'capture' => true,
+            'kind' => 'credit',
+            'reference' => $reference,
+            'amount' => (int)($amount * 100),
+            'installments' => 1,
+            'cardholderName' => $payment_data['card_holder'],
+            'cardNumber' => preg_replace('/\s+/', '', $payment_data['card_number']),
+            'expirationMonth' => substr($payment_data['card_expiry'], 0, 2),
+            'expirationYear' => '20' . substr($payment_data['card_expiry'], 3, 2),
+            'securityCode' => $payment_data['card_cvv'],
+            'subscription' => true,
+            'origin' => 1,
+            'storageCard' => '1', // ⭐ REGISTRAR CARTÃO
+            'transactionCredentials' => [
+                'credentialId' => '01' // ⭐ PARA PRIMEIRA TRANSAÇÃO
+            ],
+            'softDescriptor' => 'UP Market Sub'
+        ];
+    }
+
+    /**
+     * Prepara dados para transação recorrente (storageCard=2)
+     */
+    private function prepare_recurring_transaction_data(SubscriptionInterface $subscription): array
+    {
+        $amount = $this->get_subscription_amount($subscription);
+        $reference = upmkt_build_reference($subscription->get_id());
+        $brand_tid = $subscription->get_meta('rede_brand_tid');
+
+        if (empty($brand_tid)) {
+            throw new \Exception('BrandTid não encontrado para cobrança recorrente');
+        }
+
+        return [
+            'capture' => true,
+            'kind' => 'credit',
+            'reference' => $reference,
+            'amount' => (int)($amount * 100),
+            'installments' => 1,
+            'cardholderName' => 'TITULAR CARTAO',
+            'cardNumber' => '5448280000000007', // ⭐ Placeholder - a API usa brandTid
+            'expirationMonth' => '01',
+            'expirationYear' => '2035',
+            // ⭐ SEM securityCode nas recorrências
+            'subscription' => true,
+            'origin' => 1,
+            'storageCard' => "2", // ⭐ CARTÃO JÁ REGISTRADO
+            'brandTid' => $brand_tid, // ⭐ BRANDTID SALVO
+            'transactionCredentials' => [
+                'credentialId' => "02" // ⭐ PARA RECORRÊNCIAS
+            ],
+            'softDescriptor' => 'UP Market Sub'
+        ];
+    }
+
+    /**
+     * Parse melhorado da resposta da API
+     */
+    private function parse_api_response($response): array
+    {
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        Logger::instance()->debug('Rede API Response: ' . $body, 'gateways');
+
+        if ($status_code === 200 || $status_code === 201) {
+            return [
+                'success' => true,
+                'transaction_id' => $result['tid'] ?? '',
+                'brand_tid' => $result['brandTid'] ?? '', // ⭐ SALVAR BRANDTID
+                'last_four' => $result['last4'] ?? '', // ⭐ SALVAR ÚLTIMOS 4 DÍGITOS
+                'message' => $result['returnMessage'] ?? 'Transação criada com sucesso'
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => $result['returnMessage'] ?? 'Erro na transação',
+            'error_code' => $result['returnCode'] ?? ''
+        ];
+    }
+
 }

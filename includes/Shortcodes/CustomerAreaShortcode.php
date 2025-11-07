@@ -128,8 +128,6 @@ class CustomerAreaShortcode
         $is_cancelled = $status === 'cancelled';
         $is_expired = $status === 'expired';
         $is_pending = $status === 'pending';
-
-        // REMOVIDO: $show_new_subscription_btn não é mais usado aqui
         ?>
         <div class="upmkt-subscription-card">
             <div class="upmkt-subscription-header">
@@ -193,19 +191,38 @@ class CustomerAreaShortcode
                 </div>
             <?php endif; ?>
 
-            <!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
-            <?php if (($is_active || $is_paused) && !$is_pending): ?>
-                <div class="upmkt-payment-info">
-                    <h6><i class="fas fa-credit-card"></i> Informações de Pagamento</h6>
-                    Seus dados são armazenados de forma <strong>criptografada e segura</strong>.<br>
-                    Para alterar o cartão:
-                    <ul>
-                        <li>Cancele a doação atual</li>
-                        <li>Clique no botão "Doar novamente"</li>
-                        <li>Crie uma nova doação com o novo cartão</li>
-                    </ul>
-                </div>
-            <?php endif; ?>
+						<!-- Informações sobre pagamento (só mostra se não estiver pendente) -->
+						<?php if (($is_active || $is_paused) && !$is_pending): ?>
+								<?php $card_info = $this->get_card_display_info($subscription); ?>
+								<div class="upmkt-payment-info">
+										<h6><i class="fas fa-credit-card"></i> Informações de Pagamento</h6>
+										
+										<div class="upmkt-card-info">
+												<?php if ($card_info['has_last_four']): ?>
+														<div class="upmkt-card-number">
+																<strong>Cartão salvo:</strong> •••• •••• •••• <?php echo esc_html($card_info['last_four']); ?>
+														</div>
+												<?php else: ?>
+														<div class="upmkt-card-number">
+																<strong>Cartão:</strong> <span style="color: #dd3a49;">Últimos 4 dígitos não disponíveis</span>
+														</div>
+												<?php endif; ?>
+										</div>
+										
+										<div class="upmkt-payment-security">
+												<small><i class="fas fa-shield"></i> Seus dados são armazenados de forma <strong>criptografada e segura</strong></small>
+										</div>
+										
+										<div class="upmkt-change-card-info">
+												<p><strong>Para alterar o cartão:</strong></p>
+												<ul>
+														<li>Cancele a doação atual</li>
+														<li>Clique no botão "Doar novamente"</li>
+														<li>Crie uma nova doação com o novo cartão</li>
+												</ul>
+										</div>
+								</div>
+						<?php endif; ?>
             
             <div class="upmkt-subscription-actions">
                 <?php if ($is_pending): ?>
@@ -632,5 +649,21 @@ class CustomerAreaShortcode
             Logger::instance()->error('Retry payment error: ' . $e->getMessage(), 'customer_area');
             wp_send_json_error(['message' => 'Erro interno: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Obtém informações do cartão para exibição
+     */
+    private function get_card_display_info(Subscription $subscription): array
+    {
+        $card_token = $subscription->get_meta('rede_card_token');
+        $last_four = $subscription->get_meta('card_last_four');
+
+        return [
+            'token' => $card_token,
+            'last_four' => $last_four,
+            'has_token' => !empty($card_token),
+            'has_last_four' => !empty($last_four)
+        ];
     }
 }
