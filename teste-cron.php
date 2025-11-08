@@ -19,11 +19,6 @@ date_default_timezone_set('America/Sao_Paulo');
 // Carregar as dependências do plugin
 require_once __DIR__ . '/includes/autoload.php';
 
-// Verificar permissões
-if (!current_user_can('manage_options')) {
-    wp_die('🔒 Acesso negado. Você precisa ser administrador.');
-}
-
 // Processar formulário
 $resultado = '';
 $assinatura_selecionada = '';
@@ -55,18 +50,36 @@ function processar_recorrencia_manual($subscription_id)
             throw new Exception("Assinatura #{$subscription_id} não encontrada.");
         }
 
+        // Carregar plano para obter valor
+        $plan = new UPMarket\Subscriptions\Entities\SubscriptionPlan($subscription->get_plan_id());
+        $valor_plano = $plan->exists() ? $plan->get_price() : 0;
+
+        echo "<div style='background: #e7f3ff; padding: 15px; border-radius: 6px; margin-bottom: 15px;'>";
+        echo "<h4>📊 Dados da Assinatura</h4>";
         echo "<p><strong>Assinatura:</strong> #{$subscription->get_id()}</p>";
-        echo "<p><strong>Plano:</strong> {$subscription->get_plan_id()}</p>";
+        echo "<p><strong>Plano:</strong> {$subscription->get_plan_id()} - " . ($plan->exists() ? $plan->get_name() : 'Plano não encontrado') . "</p>";
+        echo "<p><strong>Valor do Plano:</strong> R$ " . number_format($valor_plano, 2, ',', '.') . "</p>";
         echo "<p><strong>Status Atual:</strong> {$subscription->get_status()}</p>";
 
         $next_billing = $subscription->get_next_billing_date();
         $next_billing->setTimezone(new DateTimeZone('America/Sao_Paulo'));
         echo "<p><strong>Próxima Cobrança:</strong> {$next_billing->format('d/m/Y H:i:s')}</p>";
+        echo "</div>";
 
         // Verificar se é uma assinatura ativa
         if (!$subscription->is_active()) {
             throw new Exception("Assinatura não está ativa. Status: {$subscription->get_status()}");
         }
+
+        // Buscar informações do cartão
+        $card_token = $subscription->get_meta('rede_card_token');
+        $card_last_four = $subscription->get_meta('card_last_four');
+
+        echo "<div style='background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 15px;'>";
+        echo "<h4>💳 Informações de Pagamento</h4>";
+        echo "<p><strong>Token do Cartão:</strong> " . ($card_token ? substr($card_token, 0, 10) . '...' : 'Não encontrado') . "</p>";
+        echo "<p><strong>Últimos 4 dígitos:</strong> " . ($card_last_four ? '**** **** **** ' . $card_last_four : 'Não disponível') . "</p>";
+        echo "</div>";
 
         // Forçar data de cobrança para agora (para simular recorrência)
         $data_original = $subscription->get_next_billing_date()->format('Y-m-d H:i:s');
@@ -75,8 +88,12 @@ function processar_recorrencia_manual($subscription_id)
         $agora_sp = new DateTime('now', new DateTimeZone('America/Sao_Paulo'));
         $nova_data = $agora_sp->format('Y-m-d H:i:s');
 
+        echo "<div style='background: #d4edda; padding: 15px; border-radius: 6px; margin-bottom: 15px;'>";
+        echo "<h4>🔄 Simulando Vencimento</h4>";
         echo "<p><strong>Data Original:</strong> {$data_original}</p>";
         echo "<p><strong>Forçando data para:</strong> {$nova_data}</p>";
+        echo "<p><strong>Valor a ser cobrado:</strong> R$ " . number_format($valor_plano, 2, ',', '.') . "</p>";
+        echo "</div>";
 
         // Atualizar data no banco
         $table_name = $wpdb->prefix . 'upmkt_subscriptions';
@@ -94,31 +111,86 @@ function processar_recorrencia_manual($subscription_id)
         // Executar o handler de recorrência
         do_action('upmkt_daily_subscription_check');
 
+        // Aguardar um pouco para processamento
+        sleep(2);
+
         // Recarregar assinatura para ver mudanças
         $subscription_apos = new UPMarket\Subscriptions\Entities\Subscription($subscription_id);
 
+        echo "<div style='background: #d4edda; padding: 15px; border-radius: 6px; margin: 15px 0;'>";
         echo "<h4 style='color: #28a745;'>✅ Processamento Concluído</h4>";
-        echo "<p><strong>Novo Status:</strong> {$subscription_apos->get_status()}</p>";
+
+        // Verificar resultado do pagamento
+        $status_apos = $subscription_apos->get_status();
+        $pagamento_sucesso = ($status_apos === 'active');
+
+        if ($pagamento_sucesso) {
+            echo "<p style='color: #28a745; font-weight: bold;'>💰 PAGAMENTO BEM-SUCEDIDO!</p>";
+        } else {
+            echo "<p style='color: #dc3545; font-weight: bold;'>❌ PAGAMENTO FALHOU!</p>";
+        }
+
+        echo "<p><strong>Status Anterior:</strong> {$subscription->get_status()}</p>";
+        echo "<p><strong>Status Após:</strong> {$status_apos}</p>";
 
         $next_billing_apos = $subscription_apos->get_next_billing_date();
         $next_billing_apos->setTimezone(new DateTimeZone('America/Sao_Paulo'));
         echo "<p><strong>Nova Próxima Cobrança:</strong> {$next_billing_apos->format('d/m/Y H:i:s')}</p>";
 
-        // Verificar logs
+        // Buscar transação recente
+        $ultima_transacao = $subscription_apos->get_meta('last_transaction_id');
+        $ultimo_resultado = $subscription_apos->get_meta('last_payment_result');
+
+        echo "<p><strong>ID da Transação:</strong> " . ($ultima_transacao ? $ultima_transacao : 'N/A') . "</p>";
+        echo "<p><strong>Resultado do Pagamento:</strong> " . ($ultimo_resultado ? $ultimo_resultado : 'N/A') . "</p>";
+        echo "</div>";
+
+        // Verificar logs detalhadamente
         $log_file = WP_CONTENT_DIR . '/upmkt-debug.log';
         if (file_exists($log_file)) {
             $logs = file_get_contents($log_file);
-            $linhas_recentes = array_slice(explode("\n", $logs), -10);
+            $linhas = explode("\n", $logs);
+            $linhas_recentes = array_slice($linhas, -20); // Últimas 20 linhas
 
-            echo "<h4>📋 Logs Recentes:</h4>";
-            echo "<pre style='background: #fff; padding: 10px; border-radius: 4px; font-size: 12px; max-height: 200px; overflow-y: auto;'>";
+            echo "<h4>📋 Logs Detalhados do Pagamento:</h4>";
+            echo "<div style='background: #fff; padding: 10px; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;'>";
+
+            $encontrou_pagamento = false;
             foreach ($linhas_recentes as $linha) {
-                if (strpos($linha, 'subscription') !== false || strpos($linha, 'payment') !== false) {
-                    echo htmlspecialchars($linha) . "\n";
+                if (strpos($linha, 'subscription') !== false ||
+                    strpos($linha, 'payment') !== false ||
+                    strpos($linha, 'transaction') !== false ||
+                    strpos($linha, 'Rede') !== false) {
+
+                    // Destacar linhas importantes
+                    if (strpos($linha, 'SUCCESS') !== false || strpos($linha, 'success') !== false) {
+                        echo "<div style='color: #28a745; font-weight: bold;'>" . htmlspecialchars($linha) . "</div>";
+                    } elseif (strpos($linha, 'ERROR') !== false || strpos($linha, 'error') !== false || strpos($linha, 'failed') !== false) {
+                        echo "<div style='color: #dc3545; font-weight: bold;'>" . htmlspecialchars($linha) . "</div>";
+                    } else {
+                        echo "<div>" . htmlspecialchars($linha) . "</div>";
+                    }
+
+                    $encontrou_pagamento = true;
                 }
             }
-            echo "</pre>";
+
+            if (!$encontrou_pagamento) {
+                echo "<p style='color: #6c757d;'>Nenhum log de pagamento encontrado recentemente.</p>";
+            }
+            echo "</div>";
+        } else {
+            echo "<p style='color: #dc3545;'>Arquivo de log não encontrado: {$log_file}</p>";
         }
+
+        // Resumo final
+        echo "<div style='background: " . ($pagamento_sucesso ? '#d4edda' : '#f8d7da') . "; padding: 15px; border-radius: 6px; margin-top: 15px;'>";
+        echo "<h4>" . ($pagamento_sucesso ? "✅ RESUMO: PAGAMENTO RECORRENTE BEM-SUCEDIDO" : "❌ RESUMO: PAGAMENTO RECORRENTE FALHOU") . "</h4>";
+        echo "<p><strong>Valor Cobrado:</strong> R$ " . number_format($valor_plano, 2, ',', '.') . "</p>";
+        echo "<p><strong>Status Final:</strong> {$status_apos}</p>";
+        echo "<p><strong>Próxima Cobrança:</strong> {$next_billing_apos->format('d/m/Y H:i:s')}</p>";
+        echo "<p><strong>Transação:</strong> " . ($ultima_transacao ? $ultima_transacao : 'Não registrada') . "</p>";
+        echo "</div>";
 
         echo "</div>";
 
@@ -188,7 +260,7 @@ function formatar_data_brasil($data_mysql)
             line-height: 1.6;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
