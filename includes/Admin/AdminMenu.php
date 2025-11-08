@@ -312,6 +312,20 @@ class AdminMenu
     public function enqueue_front_scripts(): void
     {
         wp_enqueue_style(
+            'bootstrap-5',
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+            [],
+            '5.3.3'
+        );
+
+        wp_enqueue_style(
+            'fontawesome-6',
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css',
+            [],
+            '6.6.0'
+        );
+
+        wp_enqueue_style(
             'upmkt-front',
             UPMKT_PLUGIN_URL . 'assets/css/front.css',
             [],

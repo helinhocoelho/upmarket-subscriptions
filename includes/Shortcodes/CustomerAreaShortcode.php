@@ -200,26 +200,28 @@ class CustomerAreaShortcode
 										<div class="upmkt-card-info">
 												<?php if ($card_info['has_last_four']): ?>
 														<div class="upmkt-card-number">
-																<strong>Cartão salvo:</strong> •••• •••• •••• <?php echo esc_html($card_info['last_four']); ?>
+																<strong>Cartão:</strong> •••• •••• •••• <?php echo esc_html($card_info['last_four']); ?>
+														</div>
+														<div class="text-danger">
+																<small>Token do Cartão: <b><?php echo esc_html($card_info['token_display']); ?></b> <--REMOVER ESTA LINHA</small>
+														</div>
+														<div class="my-1">
+															Seus dados são armazenados de forma <strong>criptografada e segura</strong>.
+														</div>
+														<div class="my-1">
+															Para alterar o cartão:
+															<ul>
+																	<li>Cancele a doação atual</li>
+																	<li>Clique no botão "Doar novamente"</li>
+																	<li>Crie uma nova doação com o novo cartão</li>
+															</ul>
+														</div>
 														</div>
 												<?php else: ?>
 														<div class="upmkt-card-number">
-																<strong>Cartão:</strong> <span style="color: #dd3a49;">Últimos 4 dígitos não disponíveis</span>
+																<strong>Cartão:</strong> <span style="color: #dd3a49;">Informações não disponíveis</span>
 														</div>
 												<?php endif; ?>
-										</div>
-										
-										<div class="upmkt-payment-security">
-												<small><i class="fas fa-shield"></i> Seus dados são armazenados de forma <strong>criptografada e segura</strong></small>
-										</div>
-										
-										<div class="upmkt-change-card-info">
-												<p><strong>Para alterar o cartão:</strong></p>
-												<ul>
-														<li>Cancele a doação atual</li>
-														<li>Clique no botão "Doar novamente"</li>
-														<li>Crie uma nova doação com o novo cartão</li>
-												</ul>
 										</div>
 								</div>
 						<?php endif; ?>
@@ -663,7 +665,8 @@ class CustomerAreaShortcode
             'token' => $card_token,
             'last_four' => $last_four,
             'has_token' => !empty($card_token),
-            'has_last_four' => !empty($last_four)
+            'has_last_four' => !empty($last_four),
+            'token_display' => $card_token ? $card_token : 'Não tokenizado'
         ];
     }
 }
